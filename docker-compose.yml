@@ -1,0 +1,42 @@
+version: "3.7"
+
+networks:
+  internal:
+    name: internal
+    driver: overlay
+    attachable: true
+
+configs:
+  node_rules:
+    file: .monitoring/prometheus/rules/swarm_node.rules.yml
+  task_rules:
+    file: .monitoring/prometheus/rules/swarm_task.rules.yml
+
+volumes:
+  postgresdatabase: {}
+  schedule: {}
+
+services:
+  postgresdatabase:
+    image: postgres:12
+    networks:
+      - internal
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: scheduler
+      POSTGRES_PASSWORD: scheduler
+      POSTGRES_DB: scheduler
+    volumes:
+      - postgresdatabase:/var/lib/postgresql/data/
+
+  schedulerrmigrate:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.scheduler.migration
+    networks:
+      - internal
+    environment:
+      DATABASE_URL: postgres://scheduler:scheduler@indexer-scheduler_postgresdatabase_1/scheduler?sslmode=disable
+    depends_on:
+      - postgresdatabase
