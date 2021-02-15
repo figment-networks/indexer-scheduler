@@ -14,7 +14,7 @@ import (
 func (d *Driver) GetLatest(ctx context.Context, kind, network, chainID, taskID, version string) (lRec structures.LatestRecord, err error) {
 	row := d.db.QueryRowContext(ctx, "SELECT hash, height, latesttime, nonce, retry, task_id FROM schedule_latest WHERE network = $1 AND chain_id = $2 AND version = $3 AND kind = $4 AND task_id = $5  ORDER BY time DESC LIMIT 1", network, chainID, version, kind, taskID)
 	if row != nil {
-		if err := row.Scan(&lRec.Hash, &lRec.Height, &lRec.Time, &lRec.Nonce, &lRec.Retry, &lRec.TaskID); err != nil {
+		if err := row.Scan(&lRec.Hash, &lRec.Height, &lRec.Time, &lRec.Nonce, &lRec.RetryCount, &lRec.TaskID); err != nil {
 			if err == sql.ErrNoRows {
 				return lRec, structures.ErrDoesNotExists
 			}
@@ -27,7 +27,7 @@ func (d *Driver) GetLatest(ctx context.Context, kind, network, chainID, taskID, 
 
 func (d *Driver) SetLatest(ctx context.Context, kind, network, chainID, taskID, version string, lRec structures.LatestRecord) (err error) {
 	_, err = d.db.ExecContext(ctx, "INSERT INTO schedule_latest (latesttime, network, chain_id, version, kind, task_id, hash, height, nonce, retry, error ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
-		lRec.Time, network, chainID, version, kind, taskID, lRec.Hash, lRec.Height, lRec.Nonce, lRec.Retry, lRec.Error)
+		lRec.Time, network, chainID, version, kind, taskID, lRec.Hash, lRec.Height, lRec.Nonce, lRec.RetryCount, lRec.Error)
 	return err
 }
 
@@ -80,7 +80,7 @@ func (d *Driver) GetRuns(ctx context.Context, kind, network, taskID string, limi
 	defer rows.Close()
 	for rows.Next() {
 		rc := structures.LatestRecord{}
-		if err := rows.Scan(&rc.Hash, &rc.Height, &rc.Time, &rc.Nonce, &rc.Retry, &rc.Error, &rc.TaskID); err != nil {
+		if err := rows.Scan(&rc.Hash, &rc.Height, &rc.Time, &rc.Nonce, &rc.RetryCount, &rc.Error, &rc.TaskID); err != nil {
 			return nil, err
 		}
 		lRec = append(lRec, rc)

@@ -36,11 +36,11 @@ func (c *Client) Run(ctx context.Context, network, chainID, taskID, version stri
 	}
 
 	lrec := structures.LatestRecord{
-		Hash:   latest.Hash,
-		Height: latest.Height,
-		Time:   latest.Time,
-		Nonce:  latest.Nonce,
-		Retry:  latest.Retry,
+		Hash:       latest.Hash,
+		Height:     latest.Height,
+		Time:       latest.Time,
+		Nonce:      latest.Nonce,
+		RetryCount: latest.RetryCount,
 	}
 
 	resp, backoff, err := c.transport.GetLastData(ctx, structures.LatestDataRequest{
@@ -53,18 +53,18 @@ func (c *Client) Run(ctx context.Context, network, chainID, taskID, version stri
 		LastHash:   latest.Hash,
 		LastTime:   latest.Time,
 		Nonce:      latest.Nonce,
-		Retry:      latest.Retry,
+		RetryCount: latest.RetryCount,
 	})
-	lrec.Retry = resp.Retry
+	lrec.RetryCount = resp.RetryCount
 
 	if resp.LastHeight > 0 || !(resp.LastTime.IsZero() || resp.LastTime.Unix() == 0) {
 		lrec = structures.LatestRecord{
-			Hash:   resp.LastHash,
-			Height: resp.LastHeight,
-			Time:   resp.LastTime,
-			Nonce:  resp.Nonce,
-			Retry:  resp.Retry,
-			Error:  resp.Error,
+			Hash:       resp.LastHash,
+			Height:     resp.LastHeight,
+			Time:       resp.LastTime,
+			Nonce:      resp.Nonce,
+			RetryCount: resp.RetryCount,
+			Error:      resp.Error,
 		}
 	}
 
@@ -72,11 +72,13 @@ func (c *Client) Run(ctx context.Context, network, chainID, taskID, version stri
 	if len(resp.Error) != 0 {
 		lrec.Height = latest.Height
 		lrec.Error = resp.Error
+		backoff = true
 	}
 
 	if err != nil {
 		lrec.Error = []byte(err.Error())
-		lrec.Retry++
+		backoff = true
+		lrec.RetryCount++
 	}
 
 	if err2 := c.store.SetLatest(ctx, RunnerName, network, chainID, version, taskID, lrec); err2 != nil {

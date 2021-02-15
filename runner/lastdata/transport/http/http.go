@@ -43,7 +43,7 @@ func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structure
 		zap.String("chain_id", ldReq.ChainID),
 		zap.String("address", t.Address),
 		zap.Uint64("last_height", ldReq.LastHeight),
-		zap.Uint64("retry", ldReq.Retry),
+		zap.Uint64("retry_count", ldReq.RetryCount),
 	)
 
 	b := &bytes.Buffer{}
@@ -80,7 +80,7 @@ func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structure
 			LastTime:   ldReq.LastTime,
 			LastEpoch:  ldReq.LastEpoch,
 			Nonce:      ldReq.Nonce,
-			Retry:      ldReq.Retry + 1,
+			RetryCount: ldReq.RetryCount + 1,
 		}, true, nil
 	}
 

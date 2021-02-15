@@ -36,14 +36,14 @@ type RunConfigParams struct {
 }
 
 type LatestRecord struct {
-	TaskID string    `json:"task_id"`
-	Hash   string    `json:"hash"`
-	Height uint64    `json:"height"`
-	Time   time.Time `json:"time"`
-	From   string    `json:"from"`
-	Nonce  []byte    `json:"nonce"`
-	Retry  uint64    `json:"retry"`
-	Error  []byte    `json:"error"`
+	TaskID     string    `json:"task_id"`
+	Hash       string    `json:"hash"`
+	Height     uint64    `json:"height"`
+	Time       time.Time `json:"time"`
+	From       string    `json:"from"`
+	Nonce      []byte    `json:"nonce"`
+	RetryCount uint64    `json:"retry_count"`
+	Error      []byte    `json:"error"`
 }
 
 type RunError struct {
@@ -66,21 +66,21 @@ type LatestDataRequest struct {
 	TaskID  string `json:"task_id"`
 
 	LastHash   string    `json:"lastHash"`
-	LastEpoch  string    `json:"lastEpoch"`
-	LastHeight uint64    `json:"lastHeight"`
-	LastTime   time.Time `json:"lastTime"`
-	Retry      uint64    `json:"retry"`
+	LastEpoch  string    `json:"last_epoch"`
+	LastHeight uint64    `json:"last_height"`
+	LastTime   time.Time `json:"last_time"`
+	RetryCount uint64    `json:"retry_count"`
 	Nonce      []byte    `json:"nonce"`
 
 	SelfCheck bool `json:"selfCheck"`
 }
 
 type LatestDataResponse struct {
-	LastHash   string    `json:"lastHash"`
-	LastHeight uint64    `json:"lastHeight"`
-	LastTime   time.Time `json:"lastTime"`
-	LastEpoch  string    `json:"lastEpoch"`
-	Retry      uint64    `json:"retry"`
+	LastHash   string    `json:"last_hash"`
+	LastHeight uint64    `json:"last_height"`
+	LastTime   time.Time `json:"last_time"`
+	LastEpoch  string    `json:"last_epoch"`
+	RetryCount uint64    `json:"retry_count"`
 	Nonce      []byte    `json:"nonce"`
 	Error      []byte    `json:"error"`
 
