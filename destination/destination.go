@@ -12,20 +12,22 @@ import (
 )
 
 type Target struct {
-	ChainID string
-	Network string
-	Version string
-	Address string
+	ChainID  string `json:"chain_id"`
+	Network  string `json:"network"`
+	Version  string `json:"version"`
+	Address  string `json:"address"`
+	ConnType string `json:"conn_type"`
 }
 
 type NVCKey struct {
-	Network string
-	Version string
-	ChainID string
+	Network  string
+	Version  string
+	ChainID  string
+	ConnType string
 }
 
 func (nv NVCKey) String() string {
-	return fmt.Sprintf("%s:%s (%s)", nv.Network, nv.ChainID, nv.Version)
+	return fmt.Sprintf("%s:%s (%s) %s", nv.Network, nv.ChainID, nv.Version, nv.ConnType)
 }
 
 type Scheme struct {
@@ -66,13 +68,15 @@ func (s *Scheme) Add(t Target) {
 	s.destinationLock.Lock()
 	defer s.destinationLock.Unlock()
 
-	i, ok := s.destinations[NVCKey{t.Network, t.Version, t.ChainID}]
+	s.logger.Info("[Scheduler] Adding destination config", zap.String("connection_tpe", t.ConnType), zap.String("network", t.Network), zap.String("chain", t.ChainID))
+
+	i, ok := s.destinations[NVCKey{t.Network, t.Version, t.ChainID, t.ConnType}]
 	if !ok {
 		i = []Target{}
 	}
 	i = append(i, t)
 
-	s.destinations[NVCKey{t.Network, t.Version, t.ChainID}] = i
+	s.destinations[NVCKey{t.Network, t.Version, t.ChainID, t.ConnType}] = i
 }
 
 func (s *Scheme) Get(nv NVCKey) (t Target, ok bool) {

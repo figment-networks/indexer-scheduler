@@ -3,6 +3,8 @@ package process
 import (
 	"context"
 	"errors"
+	"math"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -11,7 +13,7 @@ import (
 )
 
 type Runner interface {
-	Run(ctx context.Context, network, chain, taskID, version string) error
+	Run(ctx context.Context, network, chain, taskID, version string) (backoff bool, err error)
 	Name() string
 }
 
@@ -45,13 +47,26 @@ func (s *Scheduler) Run(ctx context.Context, name string, d time.Duration, netwo
 	}
 	s.runlock.Unlock()
 
+	var backoffCounter uint64
 RunLoop:
 	for {
 		select {
 		case <-tckr.C:
-			if err := r.Run(cCtx, network, chainID, taskID, version); err != nil {
+			backoff, err := r.Run(cCtx, network, chainID, taskID, version)
+			if backoff {
+				backoffCounter++
+				dur := calcBackoff(d, backoffCounter)
+				s.logger.Info("[Process] Setting backoff", zap.Duration("duration", dur))
+				tckr.Reset(dur)
+			} else if backoffCounter > 0 {
+				s.logger.Info("[Process] Resetting backoff", zap.Duration("duration", d))
+				backoffCounter = 0
+				tckr.Reset(d)
+			}
+
+			if err != nil {
 				var rErr *structures.RunError
-				s.logger.Error("[Process] Error running "+name+" "+network+" "+chainID+" "+taskID+" "+version, zap.Error(err))
+				s.logger.Error("[Process] Error running task", zap.String("name", name), zap.String("network", network), zap.String("chain_id", chainID), zap.String("task_id", taskID), zap.String("version", version), zap.Error(err))
 				if errors.As(err, &rErr) {
 					if !rErr.IsRecoverable() {
 						tckr.Stop()
@@ -59,6 +74,7 @@ RunLoop:
 					}
 				}
 			}
+
 		case <-cCtx.Done():
 			tckr.Stop()
 			break RunLoop
@@ -81,4 +97,21 @@ func (s *Scheduler) Stop(ctx context.Context, name string) {
 	if ok {
 		r.CancelFunc()
 	}
+}
+
+var backoffsMultipliers = []float64{.5, 1, 1, 1.5, 2, 4, 4, 8, 8, 16, 16, 32}
+
+func calcBackoff(initialDuration time.Duration, backoffIteration uint64) (finalDuration time.Duration) {
+
+	bl := len(backoffsMultipliers)
+
+	multiplier := backoffsMultipliers[bl-1]
+	if backoffIteration < uint64(bl-1) {
+		multiplier = backoffsMultipliers[backoffIteration]
+	}
+
+	newDur := float64(initialDuration.Milliseconds()) * multiplier
+	newDur += newDur * rand.Float64()
+
+	return time.Duration(math.Ceil(newDur * float64(time.Millisecond)))
 }

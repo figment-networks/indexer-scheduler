@@ -76,7 +76,7 @@ func (c *Core) AddSchedules(ctx context.Context, rcs []structures.RunConfig) err
 
 	for _, r := range rcs {
 		if r.Kind != "" && r.Network != "" && r.ChainID != "" {
-			c.logger.Info("Adding schedule config", zap.String("kind", r.Kind), zap.String("network", r.Network), zap.String("chain", r.ChainID), zap.String("task_id", r.TaskID))
+			c.logger.Info("[Scheduler] Adding schedule config", zap.String("kind", r.Kind), zap.String("network", r.Network), zap.String("chain", r.ChainID), zap.String("task_id", r.TaskID))
 			r.RunID = c.ID
 			err := c.coreStore.AddConfig(ctx, r)
 			if err != nil && !errors.Is(err, params.ErrAlreadyRegistred) {

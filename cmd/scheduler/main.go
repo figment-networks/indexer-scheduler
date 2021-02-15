@@ -125,21 +125,10 @@ func main() {
 	c := core.NewCore(cStore, pStore, sch, logger)
 	c.RegisterHandles(mux)
 	scheme := destination.NewScheme(logger)
-
-	scheme.Add(destination.Target{
-		"mainnet",
-		"skale",
-		"0.0.1",
-		"http://0.0.0.0:8885",
-	})
 	scheme.RegisterHandles(mux)
 
-	rHTTP := runnerHTTP.NewLastDataHTTPTransport(scheme)
-	lh := lastdata.NewClient(pStore, rHTTP)
-	c.LoadRunner("lastdata", lh)
-
 	if cfg.InitialConfig != "" {
-		logger.Info("[Scheduler] Loading initial config")
+		logger.Info("[Scheduler] Loading schedule initial config")
 
 		files, err := ioutil.ReadDir(cfg.InitialConfig)
 		if err != nil {
@@ -189,11 +178,50 @@ func main() {
 			logger.Fatal("Error adding schedules", zap.Error(err))
 			return
 		}
+
+		logger.Info("[Scheduler] Loading destinations initial config")
+
+		files, err = ioutil.ReadDir(cfg.DestinationsConfig)
+		if err != nil {
+			logger.Fatal("Error reading scheduling config dir", zap.Error(err))
+			return
+		}
+
+		trgts := []destination.Target{}
+		for _, fileInfo := range files {
+			if fileInfo.IsDir() {
+				continue
+			}
+
+			file, err := os.Open(path.Join(cfg.DestinationsConfig, fileInfo.Name()))
+			if err != nil {
+				logger.Fatal("Error reading config file", zap.Error(err), zap.String("filepath", path.Join(cfg.DestinationsConfig, fileInfo.Name())))
+				return
+			}
+
+			dec := json.NewDecoder(file)
+			err = dec.Decode(&trgts)
+			file.Close()
+			if err != nil {
+				logger.Fatal("Error reading config file (decode)", zap.Error(err), zap.String("filepath", path.Join(cfg.DestinationsConfig, fileInfo.Name())))
+				return
+			}
+
+			for _, trgt := range trgts {
+				scheme.Add(trgt)
+			}
+		}
 	}
+
 	logger.Info("[Scheduler] Running Load")
 	go reloadScheduler(ctx, logger, c)
 
 	mux.Handle("/metrics", metrics.Handler())
+
+	rHTTP := runnerHTTP.NewLastDataHTTPTransport(scheme, logger)
+	lh := lastdata.NewClient(pStore, rHTTP)
+	// (lukanus): make it loadable in future
+	c.LoadRunner("lastdata", lh)
 
 	s := &http.Server{
 		Addr:    cfg.Address,

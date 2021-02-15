@@ -1,4 +1,4 @@
-package destination
+package manager
 
 import (
 	"context"
@@ -8,35 +8,19 @@ import (
 	"sync"
 	"time"
 
+	"github.com/figment-networks/indexer-scheduler/destination"
 	"go.uber.org/zap"
 )
 
 var WorkerStateOnline int64 = 1
 
-type Target struct {
-	ChainID string
-	Network string
-	Version string
-	Address string
-}
-
-type NVCKey struct {
-	Network string
-	Version string
-	ChainID string
-}
-
-func (nv NVCKey) String() string {
-	return fmt.Sprintf("%s:%s (%s)", nv.Network, nv.ChainID, nv.Version)
-}
-
 type Scheme struct {
-	destinations    map[NVCKey][]Target
+	destinations    map[destination.NVCKey][]destination.Target
 	destinationLock sync.RWMutex
 
 	logger *zap.Logger
 
-	managers map[string]map[NVCKey]bool
+	managers map[string]map[destination.NVCKey]bool
 }
 
 type WorkerNetworkStatic struct {
@@ -62,25 +46,25 @@ type WorkerConnection struct {
 func NewScheme(logger *zap.Logger) *Scheme {
 	return &Scheme{
 		logger:       logger,
-		destinations: make(map[NVCKey][]Target),
-		managers:     make(map[string]map[NVCKey]bool),
+		destinations: make(map[destination.NVCKey][]destination.Target),
+		managers:     make(map[string]map[destination.NVCKey]bool),
 	}
 }
 
-func (s *Scheme) Add(t Target) {
+func (s *Scheme) Add(t destination.Target) {
 	s.destinationLock.Lock()
 	defer s.destinationLock.Unlock()
 
-	i, ok := s.destinations[NVCKey{t.Network, t.Version, t.ChainID}]
+	i, ok := s.destinations[destination.NVCKey{t.Network, t.Version, t.ChainID, t.ConnType}]
 	if !ok {
-		i = []Target{}
+		i = []destination.Target{}
 	}
 	i = append(i, t)
 
-	s.destinations[NVCKey{t.Network, t.Version, t.ChainID}] = i
+	s.destinations[destination.NVCKey{t.Network, t.Version, t.ChainID, t.ConnType}] = i
 }
 
-func (s *Scheme) Get(nv NVCKey) (t Target, ok bool) {
+func (s *Scheme) Get(nv destination.NVCKey) (t destination.Target, ok bool) {
 	s.destinationLock.RLock()
 	defer s.destinationLock.RUnlock()
 
@@ -100,7 +84,7 @@ func (s *Scheme) AddManager(address string) {
 	}
 
 	s.logger.Info("[Scheme] Adding Manager", zap.String("address", address))
-	s.managers[address] = make(map[NVCKey]bool)
+	s.managers[address] = make(map[destination.NVCKey]bool)
 }
 
 func (s *Scheme) Refresh(ctx context.Context) error {
@@ -128,12 +112,12 @@ func (s *Scheme) Refresh(ctx context.Context) error {
 			return fmt.Errorf("error making request to  %s : %w", "http://"+address+"/get_workers", err)
 		}
 
-		k := make(map[NVCKey]bool)
+		k := make(map[destination.NVCKey]bool)
 
 		for network, sub := range wns {
 			for _, w := range sub.Workers {
 				for _, ci := range w.ConnectionInfo {
-					k[NVCKey{Network: network, Version: ci.Version, ChainID: ci.ChainID}] = (w.State == WorkerStateOnline)
+					k[destination.NVCKey{Network: network, Version: ci.Version, ChainID: ci.ChainID}] = (w.State == WorkerStateOnline)
 				}
 			}
 		}
@@ -154,9 +138,9 @@ func (s *Scheme) Refresh(ctx context.Context) error {
 			}
 			dest, ok := s.destinations[nv]
 			if !ok {
-				dest = []Target{}
+				dest = []destination.Target{}
 			}
-			dest = append(dest, Target{Network: nv.Network, ChainID: nv.ChainID, Version: nv.Version, Address: addr})
+			dest = append(dest, destination.Target{Network: nv.Network, ChainID: nv.ChainID, Version: nv.Version, Address: addr})
 			s.destinations[nv] = dest
 		}
 	}
@@ -165,8 +149,8 @@ func (s *Scheme) Refresh(ctx context.Context) error {
 }
 
 type schemeOutp struct {
-	Destinations map[string][]Target        `json:"destinations"`
-	Managers     map[string]map[string]bool `json:"managers"`
+	Destinations map[string][]destination.Target `json:"destinations"`
+	Managers     map[string]map[string]bool      `json:"managers"`
 }
 
 func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +161,7 @@ func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) 
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	so := schemeOutp{
-		Destinations: make(map[string][]Target),
+		Destinations: make(map[string][]destination.Target),
 		Managers:     make(map[string]map[string]bool),
 	}
 

@@ -10,42 +10,56 @@ import (
 
 	"github.com/figment-networks/indexer-scheduler/destination"
 	"github.com/figment-networks/indexer-scheduler/structures"
+	"go.uber.org/zap"
 )
+
+const ConnectionTypeHTTP = "http"
 
 type LastDataHTTPTransport struct {
 	client *http.Client
 	dest   *destination.Scheme
+	l      *zap.Logger
 }
 
-func NewLastDataHTTPTransport(dest *destination.Scheme) *LastDataHTTPTransport {
+func NewLastDataHTTPTransport(dest *destination.Scheme, l *zap.Logger) *LastDataHTTPTransport {
 	return &LastDataHTTPTransport{
 		dest: dest,
+		l:    l,
 		client: &http.Client{
 			Timeout: time.Second * 40,
 		},
 	}
 }
 
-func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structures.LatestDataRequest) (ldr structures.LatestDataResponse, err error) {
-	t, ok := ld.dest.Get(destination.NVCKey{Network: ldReq.Network, Version: ldReq.Version, ChainID: ldReq.ChainID})
+func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structures.LatestDataRequest) (ldr structures.LatestDataResponse, backoff bool, err error) {
+
+	t, ok := ld.dest.Get(destination.NVCKey{Network: ldReq.Network, Version: ldReq.Version, ChainID: ldReq.ChainID, ConnType: ConnectionTypeHTTP})
 	if !ok {
-		return ldr, &structures.RunError{Contents: fmt.Errorf("error getting response:  %w", structures.ErrNoWorkersAvailable)}
+		return ldr, false, &structures.RunError{Contents: fmt.Errorf("error getting response:  %w", structures.ErrNoWorkersAvailable)}
 	}
+
+	ld.l.Info("Running LastData",
+		zap.String("network", ldReq.Network),
+		zap.String("chain_id", ldReq.ChainID),
+		zap.String("address", t.Address),
+		zap.Uint64("last_height", ldReq.LastHeight),
+		zap.Uint64("retry", ldReq.Retry),
+	)
 
 	b := &bytes.Buffer{}
 	enc := json.NewEncoder(b)
 	if err := enc.Encode(&ldReq); err != nil {
-		return ldr, &structures.RunError{Contents: fmt.Errorf("error encoding request: %w", err)}
+		return ldr, false, &structures.RunError{Contents: fmt.Errorf("error encoding request: %w", err)}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.Address+"/scrape_latest", b)
 	if err != nil {
-		return ldr, &structures.RunError{Contents: fmt.Errorf("error creating response: %w", err)}
+		return ldr, false, &structures.RunError{Contents: fmt.Errorf("error creating response: %w", err)}
 	}
 
 	resp, err := ld.client.Do(req)
 	if err != nil {
-		return ldr, &structures.RunError{Contents: fmt.Errorf("error getting response:  %w", err)}
+		return ldr, true, &structures.RunError{Contents: fmt.Errorf("error getting response:  %w", err)}
 	}
 
 	ldrr := &structures.LatestDataResponse{}
@@ -55,7 +69,7 @@ func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structure
 	defer resp.Body.Close()
 
 	if err = dec.Decode(ldrr); err != nil {
-		return *ldrr, &structures.RunError{Contents: fmt.Errorf("error decoding response:  %w", err)}
+		return *ldrr, false, &structures.RunError{Contents: fmt.Errorf("error decoding response:  %w", err)}
 	}
 
 	// Still processing
@@ -67,8 +81,8 @@ func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structure
 			LastEpoch:  ldReq.LastEpoch,
 			Nonce:      ldReq.Nonce,
 			Retry:      ldReq.Retry + 1,
-		}, nil
+		}, true, nil
 	}
 
-	return *ldrr, nil
+	return *ldrr, false, nil
 }

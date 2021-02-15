@@ -3,7 +3,6 @@ package lastdata
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/figment-networks/indexer-scheduler/persistence"
 	"github.com/figment-networks/indexer-scheduler/structures"
@@ -12,7 +11,7 @@ import (
 const RunnerName = "lastdata"
 
 type LastDataTransporter interface {
-	GetLastData(context.Context, structures.LatestDataRequest) (structures.LatestDataResponse, error)
+	GetLastData(context.Context, structures.LatestDataRequest) (lastResponse structures.LatestDataResponse, backoff bool, err error)
 }
 
 type Client struct {
@@ -30,11 +29,10 @@ func (c *Client) Name() string {
 	return RunnerName
 }
 
-func (c *Client) Run(ctx context.Context, network, chainID, taskID, version string) error {
-	log.Println("running Run")
+func (c *Client) Run(ctx context.Context, network, chainID, taskID, version string) (backoff bool, err error) {
 	latest, err := c.store.GetLatest(ctx, RunnerName, network, chainID, taskID, version)
 	if err != nil && err != structures.ErrDoesNotExists {
-		return &structures.RunError{Contents: fmt.Errorf("error getting data from store GetLatest [%s]:  %w", RunnerName, err)}
+		return false, &structures.RunError{Contents: fmt.Errorf("error getting data from store GetLatest [%s]:  %w", RunnerName, err)}
 	}
 
 	lrec := structures.LatestRecord{
@@ -45,7 +43,7 @@ func (c *Client) Run(ctx context.Context, network, chainID, taskID, version stri
 		Retry:  latest.Retry,
 	}
 
-	resp, err := c.transport.GetLastData(ctx, structures.LatestDataRequest{
+	resp, backoff, err := c.transport.GetLastData(ctx, structures.LatestDataRequest{
 		Network: network,
 		ChainID: chainID,
 		Version: version,
@@ -55,6 +53,7 @@ func (c *Client) Run(ctx context.Context, network, chainID, taskID, version stri
 		LastHash:   latest.Hash,
 		LastTime:   latest.Time,
 		Nonce:      latest.Nonce,
+		Retry:      latest.Retry,
 	})
 	lrec.Retry = resp.Retry
 
@@ -81,12 +80,12 @@ func (c *Client) Run(ctx context.Context, network, chainID, taskID, version stri
 	}
 
 	if err2 := c.store.SetLatest(ctx, RunnerName, network, chainID, version, taskID, lrec); err2 != nil {
-		return &structures.RunError{Contents: fmt.Errorf("error writing last record SetLatest [%s]:  %w", RunnerName, err2)}
+		return false, &structures.RunError{Contents: fmt.Errorf("error writing last record SetLatest [%s]:  %w", RunnerName, err2)}
 	}
 
 	if err != nil {
-		return &structures.RunError{Contents: fmt.Errorf("error getting data from GetLastData [%s]:  %w", RunnerName, err)}
+		return backoff, &structures.RunError{Contents: fmt.Errorf("error getting data from GetLastData [%s]:  %w", RunnerName, err)}
 	}
 
-	return nil
+	return backoff, nil
 }
