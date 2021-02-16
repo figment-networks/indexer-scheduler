@@ -158,7 +158,7 @@ func main() {
 			}
 
 			for _, rConf := range rcp {
-				duration, err := time.ParseDuration(rConf.Duration)
+				duration, err := time.ParseDuration(rConf.Interval)
 				if err != nil {
 					logger.Fatal("Error parsing duration ", zap.Error(err), zap.String("filepath", path.Join(cfg.InitialConfig, fileInfo.Name())))
 					return
@@ -221,7 +221,7 @@ func main() {
 	rHTTP := runnerHTTP.NewLastDataHTTPTransport(scheme, logger)
 	lh := lastdata.NewClient(pStore, rHTTP)
 	// (lukanus): make it loadable in future
-	c.LoadRunner("lastdata", lh)
+	c.LoadRunner(lastdata.RunnerName, lh)
 
 	s := &http.Server{
 		Addr:    cfg.Address,

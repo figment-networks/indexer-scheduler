@@ -1,0 +1,7 @@
+[{
+    "network": "skale",
+    "chain_id": "mainnet",
+    "version": "0.0.1",
+    "conn_type": "http",
+    "address": "http://0.0.0.0:8885"
+}]

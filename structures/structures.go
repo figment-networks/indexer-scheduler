@@ -9,7 +9,6 @@ import (
 )
 
 var (
-	ErrDoesNotExists      = errors.New("does not exists")
 	ErrNoWorkersAvailable = errors.New("no workers available")
 )
 
@@ -30,17 +29,17 @@ type RunConfig struct {
 type RunConfigParams struct {
 	Network  string `json:"network"`
 	ChainID  string `json:"chain_id"`
-	Duration string `json:"duration"`
+	Interval string `json:"interval"`
 	Kind     string `json:"kind"`
 	TaskID   string `json:"task_id"`
-}
 
+	Version string `json:"version"`
+}
 type LatestRecord struct {
 	TaskID     string    `json:"task_id"`
 	Hash       string    `json:"hash"`
 	Height     uint64    `json:"height"`
 	Time       time.Time `json:"time"`
-	From       string    `json:"from"`
 	Nonce      []byte    `json:"nonce"`
 	RetryCount uint64    `json:"retry_count"`
 	Error      []byte    `json:"error"`

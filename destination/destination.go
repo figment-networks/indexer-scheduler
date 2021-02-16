@@ -119,7 +119,6 @@ func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) 
 	if err := enc.Encode(so); err != nil {
 		s.logger.Error("[Scheme] Error encoding data http ", zap.Error(err))
 	}
-
 }
 
 func (s *Scheme) RegisterHandles(smux *http.ServeMux) {

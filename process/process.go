@@ -13,7 +13,7 @@ import (
 )
 
 type Runner interface {
-	Run(ctx context.Context, network, chain, taskID, version string) (backoff bool, err error)
+	Run(ctx context.Context, rcp structures.RunConfigParams) (backoff bool, err error)
 	Name() string
 }
 
@@ -36,7 +36,7 @@ func NewScheduler(logger *zap.Logger) *Scheduler {
 	}
 }
 
-func (s *Scheduler) Run(ctx context.Context, name string, d time.Duration, network, chainID, taskID, version string, r Runner) {
+func (s *Scheduler) Run(ctx context.Context, name string, d time.Duration, rcp structures.RunConfigParams, r Runner) {
 	cCtx, cancel := context.WithCancel(ctx)
 	tckr := time.NewTicker(d)
 
@@ -52,7 +52,7 @@ RunLoop:
 	for {
 		select {
 		case <-tckr.C:
-			backoff, err := r.Run(cCtx, network, chainID, taskID, version)
+			backoff, err := r.Run(cCtx, rcp)
 			if backoff {
 				backoffCounter++
 				dur := calcBackoff(d, backoffCounter)
@@ -66,7 +66,7 @@ RunLoop:
 
 			if err != nil {
 				var rErr *structures.RunError
-				s.logger.Error("[Process] Error running task", zap.String("name", name), zap.String("network", network), zap.String("chain_id", chainID), zap.String("task_id", taskID), zap.String("version", version), zap.Error(err))
+				s.logger.Error("[Process] Error running task", zap.String("name", name), zap.String("network", rcp.Network), zap.String("chain_id", rcp.ChainID), zap.String("task_id", rcp.TaskID), zap.String("version", rcp.Version), zap.Error(err))
 				if errors.As(err, &rErr) {
 					if !rErr.IsRecoverable() {
 						tckr.Stop()

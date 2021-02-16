@@ -7,8 +7,8 @@ import (
 )
 
 type PDriver interface {
-	GetLatest(ctx context.Context, kind, network, chainID, taskID, version string) (structures.LatestRecord, error)
-	SetLatest(ctx context.Context, kind, network, chainID, taskID, version string, latest structures.LatestRecord) error
+	GetLatest(ctx context.Context, rcp structures.RunConfigParams) (structures.LatestRecord, error)
+	SetLatest(ctx context.Context, rcp structures.RunConfigParams, latest structures.LatestRecord) error
 	GetRuns(ctx context.Context, kind, network, taskID string, limit int) (lRec []structures.LatestRecord, err error)
 }
 
@@ -16,12 +16,12 @@ type Storage struct {
 	Driver PDriver
 }
 
-func (s *Storage) GetLatest(ctx context.Context, kind, network, chainID, taskID, version string) (structures.LatestRecord, error) {
-	return s.Driver.GetLatest(ctx, kind, network, chainID, taskID, version)
+func (s *Storage) GetLatest(ctx context.Context, rcp structures.RunConfigParams) (structures.LatestRecord, error) {
+	return s.Driver.GetLatest(ctx, rcp)
 }
 
-func (s *Storage) SetLatest(ctx context.Context, kind, network, chainID, taskID, version string, latest structures.LatestRecord) error {
-	return s.Driver.SetLatest(ctx, kind, network, chainID, version, taskID, latest)
+func (s *Storage) SetLatest(ctx context.Context, rcp structures.RunConfigParams, latest structures.LatestRecord) error {
+	return s.Driver.SetLatest(ctx, rcp, latest)
 }
 
 func (s *Storage) GetRuns(ctx context.Context, kind, network, taskID string, limit int) (lRec []structures.LatestRecord, err error) {

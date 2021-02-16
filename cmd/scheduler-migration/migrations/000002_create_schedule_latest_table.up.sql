@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS schedule_latest
     kind        VARCHAR(100),
     task_id     VARCHAR(100)  NOT NULL,
 
-    latesttime  TIMESTAMP WITH TIME ZONE,
+    latest_time  TIMESTAMP WITH TIME ZONE,
     hash        TEXT,
     height      BIGSERIAL,
     epoch       TEXT,

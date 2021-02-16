@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/figment-networks/indexer-scheduler/persistence"
+	"github.com/figment-networks/indexer-scheduler/persistence/params"
 	"github.com/figment-networks/indexer-scheduler/structures"
 )
 
@@ -29,9 +30,9 @@ func (c *Client) Name() string {
 	return RunnerName
 }
 
-func (c *Client) Run(ctx context.Context, network, chainID, taskID, version string) (backoff bool, err error) {
-	latest, err := c.store.GetLatest(ctx, RunnerName, network, chainID, taskID, version)
-	if err != nil && err != structures.ErrDoesNotExists {
+func (c *Client) Run(ctx context.Context, rcp structures.RunConfigParams) (backoff bool, err error) {
+	latest, err := c.store.GetLatest(ctx, rcp)
+	if err != nil && err != params.ErrNotFound {
 		return false, &structures.RunError{Contents: fmt.Errorf("error getting data from store GetLatest [%s]:  %w", RunnerName, err)}
 	}
 
@@ -44,10 +45,10 @@ func (c *Client) Run(ctx context.Context, network, chainID, taskID, version stri
 	}
 
 	resp, backoff, err := c.transport.GetLastData(ctx, structures.LatestDataRequest{
-		Network: network,
-		ChainID: chainID,
-		Version: version,
-		TaskID:  taskID,
+		Network: rcp.Network,
+		ChainID: rcp.ChainID,
+		Version: rcp.Version,
+		TaskID:  rcp.TaskID,
 
 		LastHeight: latest.Height,
 		LastHash:   latest.Hash,
@@ -81,7 +82,7 @@ func (c *Client) Run(ctx context.Context, network, chainID, taskID, version stri
 		lrec.RetryCount++
 	}
 
-	if err2 := c.store.SetLatest(ctx, RunnerName, network, chainID, version, taskID, lrec); err2 != nil {
+	if err2 := c.store.SetLatest(ctx, rcp, lrec); err2 != nil {
 		return false, &structures.RunError{Contents: fmt.Errorf("error writing last record SetLatest [%s]:  %w", RunnerName, err2)}
 	}
 
