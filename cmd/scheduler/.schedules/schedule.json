@@ -1,0 +1,7 @@
+[{
+    "network": "skale",
+    "chain_id": "mainnet",
+    "interval": "1s",
+    "kind": "lastdata",
+    "task_id": "main_sync"
+}]
