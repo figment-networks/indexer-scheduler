@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/figment-networks/indexing-engine/health"
+	"github.com/figment-networks/indexing-engine/health/database/postgreshealth"
 	"github.com/figment-networks/indexing-engine/metrics"
 	"github.com/figment-networks/indexing-engine/metrics/prometheusmetrics"
 	"go.uber.org/zap"
@@ -111,7 +113,13 @@ func main() {
 	mux := http.NewServeMux()
 
 	attachDynamic(ctx, mux)
-	attachHealthCheck(ctx, mux, db)
+
+	dbMonitor := postgreshealth.NewPostgresMonitorWithMetrics(db, logger)
+	monitor := &health.Monitor{}
+	monitor.AddProber(ctx, dbMonitor)
+	go monitor.RunChecks(ctx, time.Second*10)
+	monitor.AttachHttp(mux)
+
 	attachProfiling(mux)
 
 	logger.Info("[Scheduler] Adding scheduler...")
