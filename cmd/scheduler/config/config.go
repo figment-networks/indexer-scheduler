@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -32,6 +33,8 @@ type Config struct {
 
 	InitialConfig      string `json:"initial_config_path" envconfig:"INITIAL_CONFIG"`
 	DestinationsConfig string `json:"destinations_config_path" envconfig:"DESTINATIONS_CONFIG"`
+
+	HealthCheckInterval time.Duration `json:"healthCheckInterval" envconfig:"HEALTH_CHECK_INTERVAL" default:"10s"`
 }
 
 // FromFile reads the config from a file

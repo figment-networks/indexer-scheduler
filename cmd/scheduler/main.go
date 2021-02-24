@@ -117,7 +117,7 @@ func main() {
 	dbMonitor := postgreshealth.NewPostgresMonitorWithMetrics(db, logger)
 	monitor := &health.Monitor{}
 	monitor.AddProber(ctx, dbMonitor)
-	go monitor.RunChecks(ctx, time.Second*10)
+	go monitor.RunChecks(ctx, cfg.HealthCheckInterval)
 	monitor.AttachHttp(mux)
 
 	attachProfiling(mux)
