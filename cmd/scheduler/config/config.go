@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -30,8 +31,10 @@ type Config struct {
 	RollbarAccessToken string `json:"rollbar_access_token" envconfig:"ROLLBAR_ACCESS_TOKEN"`
 	RollbarServerRoot  string `json:"rollbar_server_root" envconfig:"ROLLBAR_SERVER_ROOT" default:"github.com/figment-networks/indexer-scheduler"`
 
-	InitialConfig      string `json:"initial_config_path" envconfig:"INITIAL_CONFIG"`
+	SchedulesConfig    string `json:"schedules_config_path" envconfig:"SCHEDULES_CONFIG"`
 	DestinationsConfig string `json:"destinations_config_path" envconfig:"DESTINATIONS_CONFIG"`
+
+	HealthCheckInterval time.Duration `json:"health_check_interval" envconfig:"HEALTH_CHECK_INTERVAL" default:"10s"`
 }
 
 // FromFile reads the config from a file

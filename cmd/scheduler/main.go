@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/figment-networks/indexing-engine/health"
+	"github.com/figment-networks/indexing-engine/health/database/postgreshealth"
 	"github.com/figment-networks/indexing-engine/metrics"
 	"github.com/figment-networks/indexing-engine/metrics/prometheusmetrics"
 	"go.uber.org/zap"
@@ -111,7 +113,13 @@ func main() {
 	mux := http.NewServeMux()
 
 	attachDynamic(ctx, mux)
-	attachHealthCheck(ctx, mux, db)
+
+	dbMonitor := postgreshealth.NewPostgresMonitorWithMetrics(db, logger)
+	monitor := &health.Monitor{}
+	monitor.AddProber(ctx, dbMonitor)
+	go monitor.RunChecks(ctx, cfg.HealthCheckInterval)
+	monitor.AttachHttp(mux)
+
 	attachProfiling(mux)
 
 	logger.Info("[Scheduler] Adding scheduler...")
@@ -127,10 +135,10 @@ func main() {
 	scheme := destination.NewScheme(logger)
 	scheme.RegisterHandles(mux)
 
-	if cfg.InitialConfig != "" {
+	if cfg.SchedulesConfig != "" {
 		logger.Info("[Scheduler] Loading schedule initial config")
 
-		files, err := ioutil.ReadDir(cfg.InitialConfig)
+		files, err := ioutil.ReadDir(cfg.SchedulesConfig)
 		if err != nil {
 			logger.Fatal("Error reading scheduling config dir", zap.Error(err))
 			return
@@ -142,9 +150,9 @@ func main() {
 				continue
 			}
 
-			file, err := os.Open(path.Join(cfg.InitialConfig, fileInfo.Name()))
+			file, err := os.Open(path.Join(cfg.SchedulesConfig, fileInfo.Name()))
 			if err != nil {
-				logger.Fatal("Error reading config file", zap.Error(err), zap.String("filepath", path.Join(cfg.InitialConfig, fileInfo.Name())))
+				logger.Fatal("Error reading config file", zap.Error(err), zap.String("filepath", path.Join(cfg.SchedulesConfig, fileInfo.Name())))
 				return
 			}
 
@@ -153,14 +161,14 @@ func main() {
 			err = dec.Decode(&rcp)
 			file.Close()
 			if err != nil {
-				logger.Fatal("Error reading config file (decode)", zap.Error(err), zap.String("filepath", path.Join(cfg.InitialConfig, fileInfo.Name())))
+				logger.Fatal("Error reading config file (decode)", zap.Error(err), zap.String("filepath", path.Join(cfg.SchedulesConfig, fileInfo.Name())))
 				return
 			}
 
 			for _, rConf := range rcp {
 				duration, err := time.ParseDuration(rConf.Interval)
 				if err != nil {
-					logger.Fatal("Error parsing duration ", zap.Error(err), zap.String("filepath", path.Join(cfg.InitialConfig, fileInfo.Name())))
+					logger.Fatal("Error parsing duration ", zap.Error(err), zap.String("filepath", path.Join(cfg.SchedulesConfig, fileInfo.Name())))
 					return
 				}
 				rcs = append(rcs, structures.RunConfig{

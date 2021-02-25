@@ -64,7 +64,7 @@ type LatestDataRequest struct {
 	Version string `json:"version"`
 	TaskID  string `json:"task_id"`
 
-	LastHash   string    `json:"lastHash"`
+	LastHash   string    `json:"last_hash"`
 	LastEpoch  string    `json:"last_epoch"`
 	LastHeight uint64    `json:"last_height"`
 	LastTime   time.Time `json:"last_time"`
