@@ -135,10 +135,10 @@ func main() {
 	scheme := destination.NewScheme(logger)
 	scheme.RegisterHandles(mux)
 
-	if cfg.InitialConfig != "" {
+	if cfg.SchedulesConfig != "" {
 		logger.Info("[Scheduler] Loading schedule initial config")
 
-		files, err := ioutil.ReadDir(cfg.InitialConfig)
+		files, err := ioutil.ReadDir(cfg.SchedulesConfig)
 		if err != nil {
 			logger.Fatal("Error reading scheduling config dir", zap.Error(err))
 			return
@@ -150,9 +150,9 @@ func main() {
 				continue
 			}
 
-			file, err := os.Open(path.Join(cfg.InitialConfig, fileInfo.Name()))
+			file, err := os.Open(path.Join(cfg.SchedulesConfig, fileInfo.Name()))
 			if err != nil {
-				logger.Fatal("Error reading config file", zap.Error(err), zap.String("filepath", path.Join(cfg.InitialConfig, fileInfo.Name())))
+				logger.Fatal("Error reading config file", zap.Error(err), zap.String("filepath", path.Join(cfg.SchedulesConfig, fileInfo.Name())))
 				return
 			}
 
@@ -161,14 +161,14 @@ func main() {
 			err = dec.Decode(&rcp)
 			file.Close()
 			if err != nil {
-				logger.Fatal("Error reading config file (decode)", zap.Error(err), zap.String("filepath", path.Join(cfg.InitialConfig, fileInfo.Name())))
+				logger.Fatal("Error reading config file (decode)", zap.Error(err), zap.String("filepath", path.Join(cfg.SchedulesConfig, fileInfo.Name())))
 				return
 			}
 
 			for _, rConf := range rcp {
 				duration, err := time.ParseDuration(rConf.Interval)
 				if err != nil {
-					logger.Fatal("Error parsing duration ", zap.Error(err), zap.String("filepath", path.Join(cfg.InitialConfig, fileInfo.Name())))
+					logger.Fatal("Error parsing duration ", zap.Error(err), zap.String("filepath", path.Join(cfg.SchedulesConfig, fileInfo.Name())))
 					return
 				}
 				rcs = append(rcs, structures.RunConfig{
