@@ -4,7 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/figment-networks/indexer-scheduler/structures"
+	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
+	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
 )
 
 type SchedulerContractor interface {
@@ -24,7 +25,7 @@ func NewLastDataInternalTransport(sc SchedulerContractor) *LastDataInternalTrans
 func (ld *LastDataInternalTransport) GetLastData(ctx context.Context, ldReq structures.LatestDataRequest) (ldr structures.LatestDataResponse, err error) {
 	ldr, err = ld.sc.ScrapeLatest(ctx, ldReq)
 	if err != nil {
-		return ldr, &structures.RunError{Contents: fmt.Errorf("error getting response from ScrapeLatest:  %w", err)}
+		return ldr, &coreStructs.RunError{Contents: fmt.Errorf("error getting response from ScrapeLatest:  %w", err)}
 	}
 
 	return ldr, err

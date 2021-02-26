@@ -10,7 +10,9 @@ import (
 
 	"github.com/figment-networks/indexer-scheduler/destination"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata"
-	"github.com/figment-networks/indexer-scheduler/structures"
+
+	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
+	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
 	"go.uber.org/zap"
 )
 
@@ -60,7 +62,7 @@ func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structure
 
 	t, ok := ld.dest.Get(destination.NVCKey{Network: ldReq.Network, Version: ldReq.Version, ChainID: ldReq.ChainID, ConnType: ConnectionTypeHTTP})
 	if !ok {
-		return ldr, false, &structures.RunError{Contents: fmt.Errorf("error getting response:  %w", structures.ErrNoWorkersAvailable)}
+		return ldr, false, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", coreStructs.ErrNoWorkersAvailable)}
 	}
 
 	ad, ok := t.AdditionalConfig[lastdata.RunnerName]
@@ -79,17 +81,17 @@ func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structure
 	b := &bytes.Buffer{}
 	enc := json.NewEncoder(b)
 	if err := enc.Encode(&ldReq); err != nil {
-		return ldr, false, &structures.RunError{Contents: fmt.Errorf("error encoding request: %w", err)}
+		return ldr, false, &coreStructs.RunError{Contents: fmt.Errorf("error encoding request: %w", err)}
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, t.Address+adc.Endpoint, b)
 	if err != nil {
-		return ldr, false, &structures.RunError{Contents: fmt.Errorf("error creating response: %w", err)}
+		return ldr, false, &coreStructs.RunError{Contents: fmt.Errorf("error creating response: %w", err)}
 	}
 
 	resp, err := ld.client.Do(req)
 	if err != nil {
-		return ldr, true, &structures.RunError{Contents: fmt.Errorf("error getting response:  %w", err)}
+		return ldr, true, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", err)}
 	}
 
 	ldrr := &structures.LatestDataResponse{}
@@ -99,7 +101,7 @@ func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structure
 	defer resp.Body.Close()
 
 	if err = dec.Decode(ldrr); err != nil {
-		return *ldrr, false, &structures.RunError{Contents: fmt.Errorf("error decoding response:  %w", err)}
+		return *ldrr, false, &coreStructs.RunError{Contents: fmt.Errorf("error decoding response:  %w", err)}
 	}
 
 	// Still processing

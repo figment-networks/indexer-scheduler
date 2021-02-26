@@ -6,7 +6,9 @@ import (
 
 	"github.com/figment-networks/indexer-scheduler/persistence/params"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
-	"github.com/figment-networks/indexer-scheduler/structures"
+
+	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
+	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
 )
 
 const RunnerName = "lastdata"
@@ -30,10 +32,10 @@ func (c *Client) Name() string {
 	return RunnerName
 }
 
-func (c *Client) Run(ctx context.Context, rcp structures.RunConfigParams) (backoff bool, err error) {
+func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (backoff bool, err error) {
 	latest, err := c.store.GetLatest(ctx, rcp)
 	if err != nil && err != params.ErrNotFound {
-		return false, &structures.RunError{Contents: fmt.Errorf("error getting data from store GetLatest [%s]:  %w", RunnerName, err)}
+		return false, &coreStructs.RunError{Contents: fmt.Errorf("error getting data from store GetLatest [%s]:  %w", RunnerName, err)}
 	}
 
 	lrec := structures.LatestRecord{
@@ -83,11 +85,11 @@ func (c *Client) Run(ctx context.Context, rcp structures.RunConfigParams) (backo
 	}
 
 	if err2 := c.store.SetLatest(ctx, rcp, lrec); err2 != nil {
-		return false, &structures.RunError{Contents: fmt.Errorf("error writing last record SetLatest [%s]:  %w", RunnerName, err2)}
+		return false, &coreStructs.RunError{Contents: fmt.Errorf("error writing last record SetLatest [%s]:  %w", RunnerName, err2)}
 	}
 
 	if err != nil {
-		return backoff, &structures.RunError{Contents: fmt.Errorf("error getting data from GetLastData [%s]:  %w", RunnerName, err)}
+		return backoff, &coreStructs.RunError{Contents: fmt.Errorf("error getting data from GetLastData [%s]:  %w", RunnerName, err)}
 	}
 
 	return backoff, nil
