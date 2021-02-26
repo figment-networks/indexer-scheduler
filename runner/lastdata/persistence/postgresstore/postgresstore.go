@@ -11,6 +11,15 @@ import (
 	"github.com/figment-networks/indexer-scheduler/structures"
 )
 
+type Driver struct {
+	db *sql.DB
+}
+
+func NewDriver(db *sql.DB) *Driver {
+	return &Driver{
+		db: db,
+	}
+}
 func (d *Driver) GetLatest(ctx context.Context, rcp structures.RunConfigParams) (lRec structures.LatestRecord, err error) {
 	row := d.db.QueryRowContext(ctx, "SELECT hash, height, latest_time, nonce, retry, task_id FROM schedule_latest WHERE network = $1 AND chain_id = $2 AND version = $3 AND kind = $4 AND task_id = $5  ORDER BY time DESC LIMIT 1", rcp.Network, rcp.ChainID, rcp.Version, rcp.Kind, rcp.TaskID)
 	if row != nil {

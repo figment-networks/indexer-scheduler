@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/figment-networks/indexer-scheduler/persistence"
 	"github.com/figment-networks/indexer-scheduler/persistence/params"
+	"github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
 	"github.com/figment-networks/indexer-scheduler/structures"
 )
 
@@ -16,11 +16,11 @@ type LastDataTransporter interface {
 }
 
 type Client struct {
-	store     *persistence.Storage
+	store     *persistence.LastDataStorageTransport
 	transport LastDataTransporter
 }
 
-func NewClient(store *persistence.Storage, transport LastDataTransporter) *Client {
+func NewClient(store *persistence.LastDataStorageTransport, transport LastDataTransporter) *Client {
 	return &Client{
 		store:     store,
 		transport: transport,

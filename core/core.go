@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 
@@ -44,17 +43,15 @@ type Core struct {
 	logger *zap.Logger
 
 	coreStore *persistence.CoreStorage
-	pStore    *persistence.Storage
 
 	scheduler *process.Scheduler
 }
 
-func NewCore(store *persistence.CoreStorage, pStore *persistence.Storage, scheduler *process.Scheduler, logger *zap.Logger) *Core {
+func NewCore(store *persistence.CoreStorage, scheduler *process.Scheduler, logger *zap.Logger) *Core {
 	u, _ := uuid.NewRandom()
 	return &Core{
 		ID:        u,
 		coreStore: store,
-		pStore:    pStore,
 		scheduler: scheduler,
 		logger:    logger,
 
@@ -154,11 +151,6 @@ func (c *Core) ListSchedule() []RunInfo {
 	return m
 }
 
-func (c *Core) ListScheduleFor(ctx context.Context, kind, network, taskID string, limit int) ([]structures.LatestRecord, error) {
-	l, err := c.pStore.GetRuns(ctx, kind, network, taskID, limit)
-	return l, err
-}
-
 func (c *Core) EnableSchedule(ctx context.Context, sID uuid.UUID) error {
 	c.runLock.Lock()
 	defer c.runLock.Unlock()
@@ -193,6 +185,12 @@ func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
 	enc.Encode(schedule)
 }
 
+func (c *Core) RegisterHandles(smux *http.ServeMux) {
+	smux.HandleFunc("/scheduler/core/list", c.handlerListSchedule)
+	// smux.HandleFunc("/scheduler/core/return", c.handlerListScheduleFor)
+}
+
+/*
 func (c *Core) handlerListScheduleFor(w http.ResponseWriter, r *http.Request) {
 	s, err := c.ListScheduleFor(r.Context(), "lastdata", "skale", "", 1000)
 	if err != nil {
@@ -204,8 +202,10 @@ func (c *Core) handlerListScheduleFor(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	enc.Encode(s)
 }
+*/
 
-func (c *Core) RegisterHandles(smux *http.ServeMux) {
-	smux.HandleFunc("/scheduler/core/list", c.handlerListSchedule)
-	smux.HandleFunc("/scheduler/core/return", c.handlerListScheduleFor)
-}
+/*
+func (c *Core) ListScheduleFor(ctx context.Context, kind, network, taskID string, limit int) ([]structures.LatestRecord, error) {
+	l, err := c.pStore.GetRuns(ctx, kind, network, taskID, limit)
+	return l, err
+}*/

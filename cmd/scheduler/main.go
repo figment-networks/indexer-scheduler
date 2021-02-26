@@ -30,6 +30,8 @@ import (
 	"github.com/figment-networks/indexer-scheduler/process"
 
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata"
+	runnerPersistence "github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
+	runnerDatabase "github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence/postgresstore"
 	runnerHTTP "github.com/figment-networks/indexer-scheduler/runner/lastdata/transport/http"
 
 	"github.com/figment-networks/indexer-scheduler/structures"
@@ -128,9 +130,8 @@ func main() {
 	sch := process.NewScheduler(logger)
 
 	cStore := &persistence.CoreStorage{Driver: d}
-	pStore := &persistence.Storage{Driver: d}
 
-	c := core.NewCore(cStore, pStore, sch, logger)
+	c := core.NewCore(cStore, sch, logger)
 	c.RegisterHandles(mux)
 	scheme := destination.NewScheme(logger)
 	scheme.RegisterHandles(mux)
@@ -227,6 +228,8 @@ func main() {
 	mux.Handle("/metrics", metrics.Handler())
 
 	rHTTP := runnerHTTP.NewLastDataHTTPTransport(scheme, logger)
+
+	pStore := runnerPersistence.NewLastDataStorageTransport(runnerDatabase.NewDriver(db))
 	lh := lastdata.NewClient(pStore, rHTTP)
 	// (lukanus): make it loadable in future
 	c.LoadRunner(lastdata.RunnerName, lh)
