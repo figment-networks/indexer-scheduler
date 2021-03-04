@@ -1,6 +1,6 @@
 module github.com/figment-networks/indexer-scheduler
 
-go 1.15
+go 1.16
 
 require (
 	github.com/bearcherian/rollzap v1.0.2

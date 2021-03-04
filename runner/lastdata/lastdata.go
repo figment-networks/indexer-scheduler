@@ -3,8 +3,10 @@ package lastdata
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/figment-networks/indexer-scheduler/persistence/params"
+	"github.com/figment-networks/indexer-scheduler/runner/lastdata/monitor"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
 
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
@@ -20,12 +22,14 @@ type LastDataTransporter interface {
 type Client struct {
 	store     *persistence.LastDataStorageTransport
 	transport LastDataTransporter
+	m         *monitor.Monitor
 }
 
 func NewClient(store *persistence.LastDataStorageTransport, transport LastDataTransporter) *Client {
 	return &Client{
 		store:     store,
 		transport: transport,
+		m:         monitor.NewMonitor(store),
 	}
 }
 func (c *Client) Name() string {
@@ -41,7 +45,7 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 	lrec := structures.LatestRecord{
 		Hash:       latest.Hash,
 		Height:     latest.Height,
-		Time:       latest.Time,
+		LastTime:   latest.LastTime,
 		Nonce:      latest.Nonce,
 		RetryCount: latest.RetryCount,
 	}
@@ -54,7 +58,7 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 
 		LastHeight: latest.Height,
 		LastHash:   latest.Hash,
-		LastTime:   latest.Time,
+		LastTime:   latest.LastTime,
 		Nonce:      latest.Nonce,
 		RetryCount: latest.RetryCount,
 	})
@@ -64,7 +68,7 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 		lrec = structures.LatestRecord{
 			Hash:       resp.LastHash,
 			Height:     resp.LastHeight,
-			Time:       resp.LastTime,
+			LastTime:   resp.LastTime,
 			Nonce:      resp.Nonce,
 			RetryCount: resp.RetryCount,
 			Error:      resp.Error,
@@ -93,4 +97,8 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 	}
 
 	return backoff, nil
+}
+
+func (c *Client) RegisterHandles(mux *http.ServeMux) {
+	c.m.RegisterHandles(mux)
 }

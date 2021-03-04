@@ -28,6 +28,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/persistence"
 	"github.com/figment-networks/indexer-scheduler/persistence/postgresstore"
 	"github.com/figment-networks/indexer-scheduler/process"
+	"github.com/figment-networks/indexer-scheduler/ui"
 
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata"
 	runnerPersistence "github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
@@ -231,8 +232,12 @@ func main() {
 
 	pStore := runnerPersistence.NewLastDataStorageTransport(runnerDatabase.NewDriver(db))
 	lh := lastdata.NewClient(pStore, rHTTP)
+	lh.RegisterHandles(mux)
 	// (lukanus): make it loadable in future
 	c.LoadRunner(lastdata.RunnerName, lh)
+
+	uInterface := ui.NewUI()
+	uInterface.RegisterHandles(mux)
 
 	s := &http.Server{
 		Addr:    cfg.Address,

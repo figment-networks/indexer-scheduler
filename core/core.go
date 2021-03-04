@@ -17,6 +17,11 @@ import (
 	"github.com/google/uuid"
 )
 
+type MonitoredRunner interface {
+	process.Runner
+	RegisterHandles(mux *http.ServeMux)
+}
+
 type Status string
 
 var (
@@ -38,12 +43,11 @@ type Core struct {
 	run     map[uuid.UUID]*RunInfo
 	runLock sync.RWMutex
 
-	runners map[string]process.Runner
+	runners map[string]MonitoredRunner
 
 	logger *zap.Logger
 
 	coreStore *persistence.CoreStorage
-
 	scheduler *process.Scheduler
 }
 
@@ -56,11 +60,11 @@ func NewCore(store *persistence.CoreStorage, scheduler *process.Scheduler, logge
 		logger:    logger,
 
 		run:     map[uuid.UUID]*RunInfo{},
-		runners: map[string]process.Runner{},
+		runners: map[string]MonitoredRunner{},
 	}
 }
 
-func (c *Core) LoadRunner(name string, runner process.Runner) {
+func (c *Core) LoadRunner(name string, runner MonitoredRunner) {
 	c.runLock.Lock()
 	defer c.runLock.Unlock()
 
@@ -72,8 +76,13 @@ func (c *Core) AddSchedules(ctx context.Context, rcs []structures.RunConfig) err
 	defer c.runLock.Unlock()
 
 	for _, r := range rcs {
-		if r.Kind != "" && r.Network != "" && r.ChainID != "" {
-			c.logger.Info("[Scheduler] Adding schedule config", zap.String("kind", r.Kind), zap.String("network", r.Network), zap.String("chain", r.ChainID), zap.String("task_id", r.TaskID))
+		if r.Kind != "" && r.Network != "" && r.ChainID != "" && r.TaskID != "" {
+			c.logger.Info("[Scheduler] Adding schedule config",
+				zap.String("kind", r.Kind),
+				zap.String("network", r.Network),
+				zap.String("chain", r.ChainID),
+				zap.String("task_id", r.TaskID),
+			)
 			r.RunID = c.ID
 			err := c.coreStore.AddConfig(ctx, r)
 			if err != nil && !errors.Is(err, params.ErrAlreadyRegistred) {
@@ -90,7 +99,7 @@ func (c *Core) LoadScheduler(ctx context.Context) error {
 
 	c.runLock.Lock()
 	defer c.runLock.Unlock()
-	rcs, err := c.coreStore.GetConfigs(ctx, c.ID)
+	rcs, err := c.coreStore.GetConfigs(ctx)
 
 	if err != nil {
 		return err
@@ -127,9 +136,9 @@ func (c *Core) LoadScheduler(ctx context.Context) error {
 		c.logger.Info(fmt.Sprintf("[Core] Running schedule %s (%s:%s) %s in %s", runner.Name(), r.Network, r.ChainID, r.Version, r.Duration.String()))
 		var cCtx context.Context
 		cCtx, r.CFunc = context.WithCancel(ctx)
-		go c.scheduler.Run(cCtx, s.ID.String(), r.Duration, structures.RunConfigParams{Network: r.Network, ChainID: r.ChainID, TaskID: r.TaskID, Version: r.Version}, runner)
-		err := c.coreStore.MarkRunning(ctx, s.RunID, s.ID)
-		if err != nil {
+		go c.scheduler.Run(cCtx, s.ID.String(), r.Duration, structures.RunConfigParams{Network: r.Network, ChainID: r.ChainID, TaskID: r.TaskID, Version: r.Version, Kind: r.Kind}, runner)
+
+		if err := c.coreStore.MarkRunning(ctx, s.RunID, s.ID); err != nil {
 			c.logger.Error("[Core] Error setting state running", zap.Error(err))
 		}
 
@@ -148,6 +157,7 @@ func (c *Core) ListSchedule() []RunInfo {
 	for _, v := range c.run {
 		m = append(m, *v)
 	}
+
 	return m
 }
 
@@ -165,7 +175,7 @@ func (c *Core) EnableSchedule(ctx context.Context, sID uuid.UUID) error {
 	}
 
 	runner, _ := c.runners[r.Kind]
-	go c.scheduler.Run(ctx, sID.String(), r.Duration, structures.RunConfigParams{Network: r.Network, ChainID: r.ChainID, TaskID: r.TaskID, Version: r.Version}, runner)
+	go c.scheduler.Run(ctx, sID.String(), r.Duration, structures.RunConfigParams{Network: r.Network, ChainID: r.ChainID, TaskID: r.TaskID, Version: r.Version, Kind: r.Kind}, runner)
 	err := c.coreStore.MarkRunning(ctx, c.ID, sID)
 	if err != nil {
 		c.logger.Error("[Core] Error setting state running", zap.Error(err))
@@ -177,6 +187,11 @@ func (c *Core) EnableSchedule(ctx context.Context, sID uuid.UUID) error {
 	return nil
 }
 
+func (c *Core) RegisterHandles(smux *http.ServeMux) {
+	smux.HandleFunc("/scheduler/core/list", c.handlerListSchedule)
+	smux.HandleFunc("/scheduler/core/enable/", c.handlerEnableSchedule)
+}
+
 func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
 	schedule := c.ListSchedule()
 	enc := json.NewEncoder(w)
@@ -185,27 +200,11 @@ func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
 	enc.Encode(schedule)
 }
 
-func (c *Core) RegisterHandles(smux *http.ServeMux) {
-	smux.HandleFunc("/scheduler/core/list", c.handlerListSchedule)
-	// smux.HandleFunc("/scheduler/core/return", c.handlerListScheduleFor)
-}
+func (c *Core) handlerEnableSchedule(w http.ResponseWriter, r *http.Request) {
 
-/*
-func (c *Core) handlerListScheduleFor(w http.ResponseWriter, r *http.Request) {
-	s, err := c.ListScheduleFor(r.Context(), "lastdata", "skale", "", 1000)
-	if err != nil {
-		log.Println("error", err)
-	}
+	schedule := c.ListSchedule()
 	enc := json.NewEncoder(w)
-
 	w.Header().Add("Content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	enc.Encode(s)
+	enc.Encode(schedule)
 }
-*/
-
-/*
-func (c *Core) ListScheduleFor(ctx context.Context, kind, network, taskID string, limit int) ([]structures.LatestRecord, error) {
-	l, err := c.pStore.GetRuns(ctx, kind, network, taskID, limit)
-	return l, err
-}*/

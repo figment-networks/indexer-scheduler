@@ -17,9 +17,7 @@ type LastDataInternalTransport struct {
 }
 
 func NewLastDataInternalTransport(sc SchedulerContractor) *LastDataInternalTransport {
-	return &LastDataInternalTransport{
-		sc: sc,
-	}
+	return &LastDataInternalTransport{sc: sc}
 }
 
 func (ld *LastDataInternalTransport) GetLastData(ctx context.Context, ldReq structures.LatestDataRequest) (ldr structures.LatestDataResponse, err error) {
@@ -27,6 +25,5 @@ func (ld *LastDataInternalTransport) GetLastData(ctx context.Context, ldReq stru
 	if err != nil {
 		return ldr, &coreStructs.RunError{Contents: fmt.Errorf("error getting response from ScrapeLatest:  %w", err)}
 	}
-
 	return ldr, err
 }

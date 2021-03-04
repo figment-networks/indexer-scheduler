@@ -24,6 +24,8 @@ type RunConfig struct {
 
 	Duration time.Duration `json:"duration"`
 	Kind     string        `json:"kind"`
+
+	Enabled bool `json:"enabled"`
 }
 
 type RunConfigParams struct {

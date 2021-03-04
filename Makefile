@@ -37,4 +37,15 @@ pack-release:
 	@zip -r indexer-scheduler ./release
 	@rm -rf ./release
 
+.PHONY: generate
+generate:
+	go generate ./...
 
+
+.PHONY: prepare-ui
+prepare-ui:
+	set NODE_ENV=development
+	cd ./assets; npm run build;
+	rm -rf ./ui/assets
+	mkdir ./ui/assets/
+	cp -r ./assets/build/* ./ui/assets/

@@ -6,9 +6,10 @@ import (
 
 type LatestRecord struct {
 	TaskID     string    `json:"task_id"`
+	Time       time.Time `json:"time"`
 	Hash       string    `json:"hash"`
 	Height     uint64    `json:"height"`
-	Time       time.Time `json:"time"`
+	LastTime   time.Time `json:"last_time"`
 	Nonce      []byte    `json:"nonce"`
 	RetryCount uint64    `json:"retry_count"`
 	Error      []byte    `json:"error"`
