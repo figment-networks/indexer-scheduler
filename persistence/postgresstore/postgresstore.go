@@ -45,8 +45,8 @@ func (d *Driver) GetConfigs(ctx context.Context) (rcs []structures.RunConfig, er
 	return rcs, nil
 }
 
-func (d *Driver) MarkStatus(ctx context.Context, configID uuid.UUID, value bool) error {
-	res, err := d.db.ExecContext(ctx, "UPDATE schedule SET enabled = $1 WHERE id = $2 ", value, configID)
+func (d *Driver) MarkRunning(ctx context.Context, runID, configID uuid.UUID) error {
+	res, err := d.db.ExecContext(ctx, "UPDATE schedule SET run_id = $1, state = $2 WHERE id = $3 ", runID, params.StateRunning, configID)
 	if err != nil {
 		return err
 	}
@@ -56,14 +56,14 @@ func (d *Driver) MarkStatus(ctx context.Context, configID uuid.UUID, value bool)
 		return err
 	}
 	if i == 0 {
-		return errors.New("No rows updated")
+		return errors.New("no rows updated")
 	}
 
 	return nil
 }
 
-func (d *Driver) MarkRunning(ctx context.Context, runID, configID uuid.UUID) error {
-	res, err := d.db.ExecContext(ctx, "UPDATE schedule SET run_id = $1 WHERE id = $2 ", runID, configID)
+func (d *Driver) MarkStopped(ctx context.Context, id uuid.UUID) error {
+	res, err := d.db.ExecContext(ctx, "UPDATE schedule SET run_id = '', enabled = false WHERE id = $1 ", id)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,24 @@ func (d *Driver) MarkRunning(ctx context.Context, runID, configID uuid.UUID) err
 		return err
 	}
 	if i == 0 {
-		return errors.New("No rows updated")
+		return errors.New("no rows updated")
+	}
+
+	return nil
+}
+
+func (d *Driver) MarkFinished(ctx context.Context, id uuid.UUID) error {
+	res, err := d.db.ExecContext(ctx, "UPDATE schedule SET run_id = '', state = $2 WHERE id = $1", id, params.StateFinished)
+	if err != nil {
+		return err
+	}
+
+	i, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if i == 0 {
+		return errors.New("no rows updated")
 	}
 
 	return nil

@@ -3,14 +3,20 @@ package process
 import (
 	"context"
 	"errors"
+	"io"
 	"math"
 	"math/rand"
 	"sync"
 	"time"
 
 	"github.com/figment-networks/indexer-scheduler/structures"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
+
+type Marker interface {
+	MarkFinished(ctx context.Context, id uuid.UUID) error
+}
 
 type Runner interface {
 	Run(ctx context.Context, rcp structures.RunConfigParams) (backoff bool, err error)
@@ -53,6 +59,12 @@ RunLoop:
 		select {
 		case <-tckr.C:
 			backoff, err := r.Run(cCtx, rcp)
+
+			if err != nil && err == io.EOF { // finish on end of processing
+				tckr.Stop()
+				break RunLoop
+			}
+
 			if backoff {
 				backoffCounter++
 				dur := calcBackoff(d, backoffCounter)

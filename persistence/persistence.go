@@ -10,7 +10,10 @@ import (
 type CDriver interface {
 	AddConfig(ctx context.Context, rc structures.RunConfig) (err error)
 	GetConfigs(ctx context.Context) (rcs []structures.RunConfig, err error)
+
 	MarkRunning(ctx context.Context, runID, configID uuid.UUID) (err error)
+	MarkStopped(ctx context.Context, id uuid.UUID) (err error)
+	MarkFinished(ctx context.Context, id uuid.UUID) (err error)
 }
 
 type CoreStorage struct {
@@ -27,4 +30,12 @@ func (cs *CoreStorage) GetConfigs(ctx context.Context) (rcs []structures.RunConf
 
 func (cs *CoreStorage) MarkRunning(ctx context.Context, runID, configID uuid.UUID) (err error) {
 	return cs.Driver.MarkRunning(ctx, runID, configID)
+}
+
+func (cs *CoreStorage) MarkStopped(ctx context.Context, id uuid.UUID) (err error) {
+	return cs.Driver.MarkStopped(ctx, id)
+}
+
+func (cs *CoreStorage) MarkFinished(ctx context.Context, id uuid.UUID) (err error) {
+	return cs.Driver.MarkFinished(ctx, id)
 }

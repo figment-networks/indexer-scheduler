@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/figment-networks/indexer-scheduler/persistence"
@@ -25,10 +26,13 @@ type MonitoredRunner interface {
 type Status string
 
 var (
-	ErrAlreadyEnabled = errors.New("this schedule is already enabled")
+	ErrAlreadyEnabled  = errors.New("this schedule is already enabled")
+	ErrAlreadyDisabled = errors.New("this schedule is already disabled")
 
-	StatusEnabled Status = "enabled"
-	StatusChanged Status = "changed"
+	StatusEnabled  Status = "enabled"
+	StatusDisabled Status = "disabled"
+	StatusFinished Status = "finished"
+	StatusChanged  Status = "changed"
 )
 
 type RunInfo struct {
@@ -67,7 +71,6 @@ func NewCore(store *persistence.CoreStorage, scheduler *process.Scheduler, logge
 func (c *Core) LoadRunner(name string, runner MonitoredRunner) {
 	c.runLock.Lock()
 	defer c.runLock.Unlock()
-
 	c.runners[name] = runner
 }
 
@@ -97,53 +100,30 @@ func (c *Core) AddSchedules(ctx context.Context, rcs []structures.RunConfig) err
 func (c *Core) LoadScheduler(ctx context.Context) error {
 	defer c.logger.Sync()
 
-	c.runLock.Lock()
-	defer c.runLock.Unlock()
 	rcs, err := c.coreStore.GetConfigs(ctx)
 
 	if err != nil {
 		return err
 	}
 	for _, s := range rcs {
-		runner, ok := c.runners[s.Kind]
-		if !ok {
-			c.logger.Error(fmt.Sprintf("[Core] There is no such type as %s", s.Kind))
-			continue
-		}
 
+		c.runLock.Lock()
 		r, ok := c.run[s.ID]
 		if !ok {
 			r = &RunInfo{
 				RunConfig: s,
 			}
-
-		} else {
-			if r.Duration != s.Duration || r.RunID != s.RunID {
-				c.logger.Info(fmt.Sprintf("[Core] Record changed reloading %s (%s:%s) %s in %s", runner.Name(), r.Network, r.ChainID, r.Version, r.Duration.String()))
-				if r.CFunc != nil {
-					r.CFunc()
-				}
-				r.Status = StatusChanged
-			}
-
+			c.run[s.ID] = r
 		}
+		defer c.runLock.Unlock()
 
-		if r.Status == StatusEnabled {
+		if r.Status == StatusEnabled || r.Status == StatusFinished {
 			continue
 		}
 
-		// In fact run scheduler
-		c.logger.Info(fmt.Sprintf("[Core] Running schedule %s (%s:%s) %s in %s", runner.Name(), r.Network, r.ChainID, r.Version, r.Duration.String()))
-		var cCtx context.Context
-		cCtx, r.CFunc = context.WithCancel(ctx)
-		go c.scheduler.Run(cCtx, s.ID.String(), r.Duration, structures.RunConfigParams{Network: r.Network, ChainID: r.ChainID, TaskID: r.TaskID, Version: r.Version, Kind: r.Kind}, runner)
-
-		if err := c.coreStore.MarkRunning(ctx, s.RunID, s.ID); err != nil {
-			c.logger.Error("[Core] Error setting state running", zap.Error(err))
+		if err := c.EnableSchedule(ctx, s.ID); err != nil {
+			return fmt.Errorf("error running enableSchedule %w", err)
 		}
-
-		r.Status = StatusEnabled
-		c.run[s.ID] = r
 	}
 
 	return nil
@@ -174,7 +154,12 @@ func (c *Core) EnableSchedule(ctx context.Context, sID uuid.UUID) error {
 		return ErrAlreadyEnabled
 	}
 
-	runner, _ := c.runners[r.Kind]
+	runner, ok := c.runners[r.Kind]
+	if !ok {
+		return fmt.Errorf("there is no such runner: %s", r.Kind)
+	}
+
+	c.logger.Info(fmt.Sprintf("[Core] Running schedule %s (%s:%s) %s in %s", runner.Name(), r.Network, r.ChainID, r.Version, r.Duration.String()))
 	go c.scheduler.Run(ctx, sID.String(), r.Duration, structures.RunConfigParams{Network: r.Network, ChainID: r.ChainID, TaskID: r.TaskID, Version: r.Version, Kind: r.Kind}, runner)
 	err := c.coreStore.MarkRunning(ctx, c.ID, sID)
 	if err != nil {
@@ -187,9 +172,36 @@ func (c *Core) EnableSchedule(ctx context.Context, sID uuid.UUID) error {
 	return nil
 }
 
+func (c *Core) DisableSchedule(ctx context.Context, sID uuid.UUID) error {
+	c.runLock.Lock()
+	defer c.runLock.Unlock()
+
+	r, ok := c.run[sID]
+	if !ok {
+		return errors.New("there is no such schedule to disable")
+	}
+
+	if r.Status == StatusDisabled || r.Status == StatusFinished {
+		return ErrAlreadyDisabled
+	}
+
+	c.scheduler.Stop(ctx, sID.String())
+	err := c.coreStore.MarkStopped(ctx, sID)
+	if err != nil {
+		c.logger.Error("[Core] Error setting state running", zap.Error(err))
+	}
+
+	r.Status = StatusEnabled
+	c.run[sID] = r
+
+	return nil
+
+}
+
 func (c *Core) RegisterHandles(smux *http.ServeMux) {
 	smux.HandleFunc("/scheduler/core/list", c.handlerListSchedule)
 	smux.HandleFunc("/scheduler/core/enable/", c.handlerEnableSchedule)
+	smux.HandleFunc("/scheduler/core/disable/", c.handlerDisableSchedule)
 }
 
 func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
@@ -201,10 +213,42 @@ func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Core) handlerEnableSchedule(w http.ResponseWriter, r *http.Request) {
-
-	schedule := c.ListSchedule()
-	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
+
+	enc := json.NewEncoder(w)
+	sIDs := strings.Replace(r.URL.Path, "/scheduler/core/enable/", "", -1)
+	sID, err := uuid.Parse(sIDs)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode([]byte(`{"error":"` + err.Error() + `"}`))
+		return
+	}
+
+	if err := c.EnableSchedule(r.Context(), sID); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode([]byte(`{"error":"` + err.Error() + `"}`))
+		return
+	}
 	w.WriteHeader(http.StatusOK)
-	enc.Encode(schedule)
+	enc.Encode([]byte(`{"status":"ok"}`))
+}
+
+func (c *Core) handlerDisableSchedule(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-type", "application/json")
+
+	enc := json.NewEncoder(w)
+	sIDs := strings.Replace(r.URL.Path, "/scheduler/core/disable/", "", -1)
+	sID, err := uuid.Parse(sIDs)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode([]byte(`{"error":"` + err.Error() + `"}`))
+		return
+	}
+	if err := c.DisableSchedule(r.Context(), sID); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode([]byte(`{"error":"` + err.Error() + `"}`))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	enc.Encode([]byte(`{"status":"ok"}`))
 }
