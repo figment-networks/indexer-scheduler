@@ -24,7 +24,7 @@ export const receiveLastdata = (json) => ({
 
 export const fetchLastData = ( task_id, network, chain_id, kind, limit, offset) => dispatch => {
   dispatch(requestLastdata(task_id, network, chain_id, kind))
-  return fetch(`/scheduler/runner/lastdata/listRunning`, {
+  return fetch(`/scheduler/runner/`+ kind +`/listRunning`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
