@@ -42,3 +42,4 @@ export const fetchLastData = ( task_id, network, chain_id, kind, limit, offset) 
     .then(json => dispatch(receiveLastdata(json)))
 }
 
+

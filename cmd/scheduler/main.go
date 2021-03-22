@@ -35,6 +35,11 @@ import (
 	runnerDatabase "github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence/postgresstore"
 	runnerHTTP "github.com/figment-networks/indexer-scheduler/runner/lastdata/transport/http"
 
+	"github.com/figment-networks/indexer-scheduler/runner/syncrange"
+	runnerSyncrangePersistence "github.com/figment-networks/indexer-scheduler/runner/syncrange/persistence"
+	runnerSyncrangeDatabase "github.com/figment-networks/indexer-scheduler/runner/syncrange/persistence/postgresstore"
+	runnerSyncrangeHTTP "github.com/figment-networks/indexer-scheduler/runner/syncrange/transport/http"
+
 	"github.com/figment-networks/indexer-scheduler/structures"
 
 	_ "github.com/lib/pq"
@@ -128,7 +133,7 @@ func main() {
 	logger.Info("[Scheduler] Adding scheduler...")
 
 	d := postgresstore.NewDriver(db)
-	sch := process.NewScheduler(logger)
+	sch := process.NewScheduler(logger, d)
 
 	cStore := &persistence.CoreStorage{Driver: d}
 
@@ -137,6 +142,10 @@ func main() {
 	scheme := destination.NewScheme(logger)
 	scheme.RegisterHandles(mux)
 
+	if err := c.InitialLoad(ctx); err != nil {
+		logger.Error("[Scheduler] Error during initial load of scheduler", zap.Error(err))
+		logger.Sync()
+	}
 	if cfg.SchedulesConfig != "" {
 		logger.Info("[Scheduler] Loading schedule initial config")
 
@@ -229,12 +238,19 @@ func main() {
 	mux.Handle("/metrics", metrics.Handler())
 
 	rHTTP := runnerHTTP.NewLastDataHTTPTransport(scheme, logger)
-
 	pStore := runnerPersistence.NewLastDataStorageTransport(runnerDatabase.NewDriver(db))
+
 	lh := lastdata.NewClient(pStore, rHTTP)
 	lh.RegisterHandles(mux)
-	// (lukanus): make it loadable in future
+
+	pSRStore := runnerSyncrangePersistence.NewLastDataStorageTransport(runnerSyncrangeDatabase.NewDriver(db))
+	rsSRHTTP := runnerSyncrangeHTTP.NewSyncrangeHTTPTransport(scheme, logger)
+
+	sr := syncrange.NewClient(pSRStore, rsSRHTTP)
+	sr.RegisterHandles(mux)
+
 	c.LoadRunner(lastdata.RunnerName, lh)
+	c.LoadRunner(syncrange.RunnerName, sr)
 
 	uInterface := ui.NewUI()
 	uInterface.RegisterHandles(mux)
@@ -299,10 +315,14 @@ func runHTTP(s *http.Server, address string, logger *zap.Logger, exit chan<- str
 
 func reloadScheduler(ctx context.Context, logger *zap.Logger, c *core.Core) {
 	tckr := time.NewTicker(10 * time.Second)
-	for range tckr.C {
-		if err := c.LoadScheduler(ctx); err != nil {
-			logger.Error("[Scheduler] Error during loading of scheduler", zap.Error(err))
-			logger.Sync()
+
+	for {
+		select {
+		case <-tckr.C:
+			if err := c.LoadScheduler(ctx); err != nil {
+				logger.Error("[Scheduler] Error during loading of scheduler", zap.Error(err))
+				logger.Sync()
+			}
 		}
 	}
 }

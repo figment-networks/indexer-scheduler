@@ -6,7 +6,6 @@ const LastdataList = ({lastdatas}) => (
   <Table striped bordered condensed hover>
     <thead>
     <tr>
-        <th>task_id</th>
         <th>time</th>
         <th>retry</th>
         <th>height</th>
@@ -16,8 +15,7 @@ const LastdataList = ({lastdatas}) => (
     </tr>
     </thead>
     {lastdatas.map((ld, i) =>
-      <tr key={ld.task_id}>
-      <td>{ld.task_id}</td>
+      <tr key={i}>
       <td>{ld.time}</td>
       <td>{ld.retry_count}</td>
       <td>{ld.height}</td>

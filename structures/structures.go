@@ -8,6 +8,15 @@ import (
 	"github.com/google/uuid"
 )
 
+type State string
+
+var (
+	StateAdded    State = "added"
+	StateFinished State = "finished"
+	StateStopped  State = "stopped"
+	StateRunning  State = "running"
+)
+
 var (
 	ErrNoWorkersAvailable = errors.New("no workers available")
 )
@@ -25,7 +34,9 @@ type RunConfig struct {
 	Duration time.Duration `json:"duration"`
 	Kind     string        `json:"kind"`
 
-	Enabled bool `json:"enabled"`
+	Enabled bool                   `json:"enabled"`
+	Status  State                  `json:"status"`
+	Config  map[string]interface{} `json:"config"`
 }
 
 type RunConfigParams struct {
@@ -34,6 +45,8 @@ type RunConfigParams struct {
 	Interval string `json:"interval"`
 	Kind     string `json:"kind"`
 	TaskID   string `json:"task_id"`
+
+	Config map[string]interface{} `json:"config"`
 
 	Version string `json:"version"`
 }

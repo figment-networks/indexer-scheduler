@@ -5,6 +5,7 @@ import { connect } from 'react-redux'
 import Button from 'react-bootstrap/Button'
 import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
+import Col from 'react-bootstrap/Col'
 
 
 import LastdataList from '../components/LastdataList'
@@ -24,37 +25,29 @@ class LastData extends Component {
       dispatch: PropTypes.func.isRequired,
     }
 
-/*
-  componentDidMount() {
-    //this.props.dispatch(fetchLastdataIfNeeded())
-  }
-
-  componentDidUpdate(prevProps) {
-    if (prevProps.list !== this.props.list) {
-    }
-  }
-*/
-
 
   handleRefreshClick() {
     const { dispatch } = this.props
     dispatch(invalidateLastdata())
     dispatch(fetchLastData(this.props.task_id, this.props.network, this.props.chain_id, this.props.kind, 100, 0))
-
   }
 
 
   render() {
-    const { list, isFetching } = this.props
+    const { list, isFetching, network, chain_id, kind, task_id } = this.props
     const isEmpty = list.length === 0
     return (
       <Container>
-      <Row>
-        <Button variant="outline-dark" onClick={(e) => this.handleRefreshClick()}>Refresh</Button>
-      </Row>
+        {isEmpty ? ""
+          :
+          <Row >
+            <Col><h2>Last Data - {task_id} {network} {chain_id} ({kind}) </h2></Col>
+            <Col xs={1}><Button variant="outline-dark" onClick={(e) => this.handleRefreshClick()}>Refresh</Button></Col>
+          </Row>
+        }
       <Row>
       {isEmpty
-        ? (isFetching ? <h2>Loading...</h2> : <h2>Empty.</h2>)
+        ? (isFetching ? <h2>Loading...</h2> : "" )
         : < LastdataList lastdatas={list} />
       }
       </Row>
@@ -74,7 +67,6 @@ const mapStateToProps = (state) => {
   if (state.lastdata !== undefined && state.lastdata !== null) {
     list = state.lastdata.list
   }
-
 
   return {
     list,

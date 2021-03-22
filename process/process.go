@@ -24,31 +24,33 @@ type Runner interface {
 }
 
 type Running struct {
-	Name string
+	Id uuid.UUID
 
 	CancelFunc context.CancelFunc
 }
 
 type Scheduler struct {
-	running map[string]Running
+	running map[uuid.UUID]Running
+	marker  Marker
 	runlock sync.Mutex
 	logger  *zap.Logger
 }
 
-func NewScheduler(logger *zap.Logger) *Scheduler {
+func NewScheduler(logger *zap.Logger, marker Marker) *Scheduler {
 	return &Scheduler{
-		running: make(map[string]Running),
+		running: make(map[uuid.UUID]Running),
 		logger:  logger,
+		marker:  marker,
 	}
 }
 
-func (s *Scheduler) Run(ctx context.Context, name string, d time.Duration, rcp structures.RunConfigParams, r Runner) {
+func (s *Scheduler) Run(ctx context.Context, id uuid.UUID, d time.Duration, rcp structures.RunConfigParams, r Runner) {
 	cCtx, cancel := context.WithCancel(ctx)
 	tckr := time.NewTicker(d)
 
 	s.runlock.Lock()
-	s.running[name] = Running{
-		Name:       name,
+	s.running[id] = Running{
+		Id:         id,
 		CancelFunc: cancel,
 	}
 	s.runlock.Unlock()
@@ -62,6 +64,7 @@ RunLoop:
 
 			if err != nil && err == io.EOF { // finish on end of processing
 				tckr.Stop()
+				s.marker.MarkFinished(ctx, id)
 				break RunLoop
 			}
 
@@ -78,7 +81,7 @@ RunLoop:
 
 			if err != nil {
 				var rErr *structures.RunError
-				s.logger.Error("[Process] Error running task", zap.String("name", name), zap.String("network", rcp.Network), zap.String("chain_id", rcp.ChainID), zap.String("task_id", rcp.TaskID), zap.String("version", rcp.Version), zap.Error(err))
+				s.logger.Error("[Process] Error running task", zap.String("id", id.String()), zap.String("network", rcp.Network), zap.String("chain_id", rcp.ChainID), zap.String("task_id", rcp.TaskID), zap.String("version", rcp.Version), zap.Error(err))
 				if errors.As(err, &rErr) {
 					if !rErr.IsRecoverable() {
 						tckr.Stop()
@@ -97,15 +100,15 @@ RunLoop:
 	}
 
 	s.runlock.Lock()
-	delete(s.running, name)
+	delete(s.running, id)
 	s.runlock.Unlock()
 }
 
-func (s *Scheduler) Stop(ctx context.Context, name string) {
+func (s *Scheduler) Stop(ctx context.Context, id uuid.UUID) {
 	s.runlock.Lock()
 	defer s.runlock.Unlock()
 
-	r, ok := s.running[name]
+	r, ok := s.running[id]
 	if ok {
 		r.CancelFunc()
 	}

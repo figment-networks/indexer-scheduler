@@ -3,14 +3,14 @@ package persistence
 import (
 	"context"
 
-	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
+	"github.com/figment-networks/indexer-scheduler/runner/syncrange/structures"
 	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
 )
 
 type PDriver interface {
-	GetLatest(ctx context.Context, rcp coreStructs.RunConfigParams) (structures.LatestRecord, error)
-	SetLatest(ctx context.Context, rcp coreStructs.RunConfigParams, latest structures.LatestRecord) error
-	GetRuns(ctx context.Context, kind, network, chainID, taskID string, limit, offset uint64) (lRec []structures.LatestRecord, err error)
+	GetLatest(ctx context.Context, rcp coreStructs.RunConfigParams) (structures.SyncRecord, error)
+	SetLatest(ctx context.Context, rcp coreStructs.RunConfigParams, latest structures.SyncRecord) error
+	GetRuns(ctx context.Context, kind, network, chainID, taskID string, limit, offset uint64) (lRec []structures.SyncRecord, err error)
 }
 
 type SyncRangeStorageTransport struct {
@@ -23,14 +23,14 @@ func NewLastDataStorageTransport(driver PDriver) *SyncRangeStorageTransport {
 	}
 }
 
-func (s *SyncRangeStorageTransport) GetLatest(ctx context.Context, rcp coreStructs.RunConfigParams) (structures.LatestRecord, error) {
+func (s *SyncRangeStorageTransport) GetLatest(ctx context.Context, rcp coreStructs.RunConfigParams) (structures.SyncRecord, error) {
 	return s.Driver.GetLatest(ctx, rcp)
 }
 
-func (s *SyncRangeStorageTransport) SetLatest(ctx context.Context, rcp coreStructs.RunConfigParams, latest structures.LatestRecord) error {
+func (s *SyncRangeStorageTransport) SetLatest(ctx context.Context, rcp coreStructs.RunConfigParams, latest structures.SyncRecord) error {
 	return s.Driver.SetLatest(ctx, rcp, latest)
 }
 
-func (s *SyncRangeStorageTransport) GetRuns(ctx context.Context, kind, network, chainID, taskID string, limit, offset uint64) (lRec []structures.LatestRecord, err error) {
+func (s *SyncRangeStorageTransport) GetRuns(ctx context.Context, kind, network, chainID, taskID string, limit, offset uint64) (lRec []structures.SyncRecord, err error) {
 	return s.Driver.GetRuns(ctx, kind, network, chainID, taskID, limit, offset)
 }

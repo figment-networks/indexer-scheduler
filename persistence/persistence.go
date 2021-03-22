@@ -12,8 +12,10 @@ type CDriver interface {
 	GetConfigs(ctx context.Context) (rcs []structures.RunConfig, err error)
 
 	MarkRunning(ctx context.Context, runID, configID uuid.UUID) (err error)
-	MarkStopped(ctx context.Context, id uuid.UUID) (err error)
 	MarkFinished(ctx context.Context, id uuid.UUID) (err error)
+
+	MarkStopped(ctx context.Context, id uuid.UUID) (err error)
+	RemoveStatusAllEnabled(ctx context.Context) (err error)
 }
 
 type CoreStorage struct {
@@ -38,4 +40,8 @@ func (cs *CoreStorage) MarkStopped(ctx context.Context, id uuid.UUID) (err error
 
 func (cs *CoreStorage) MarkFinished(ctx context.Context, id uuid.UUID) (err error) {
 	return cs.Driver.MarkFinished(ctx, id)
+}
+
+func (cs *CoreStorage) RemoveStatusAllEnabled(ctx context.Context) (err error) {
+	return cs.Driver.RemoveStatusAllEnabled(ctx)
 }

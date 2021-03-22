@@ -34,7 +34,6 @@ const lastdata = (state = {
             ld.error = atob(ld.error)
           }
         }
-
         return {
           ...state,
           isFetching: false,
