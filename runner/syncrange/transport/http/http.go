@@ -8,13 +8,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/figment-networks/indexer-scheduler/destination"
-
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange"
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange/structures"
 	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
 	"go.uber.org/zap"
 )
+
+const ConnectionTypeHTTP = "http"
 
 type AdditionalConfig struct {
 	Endpoint string `json:"endpoint"`
@@ -38,33 +38,23 @@ func setAdditionalConfig(in interface{}) (ac AdditionalConfig) {
 
 }
 
-const ConnectionTypeHTTP = "http"
-
 type SyncrangeHTTPTransport struct {
 	client *http.Client
-	dest   *destination.Scheme
 	l      *zap.Logger
 }
 
-func NewSyncrangeHTTPTransport(dest *destination.Scheme, l *zap.Logger) *SyncrangeHTTPTransport {
+func NewSyncrangeHTTPTransport(l *zap.Logger) *SyncrangeHTTPTransport {
 	return &SyncrangeHTTPTransport{
-		dest: dest,
-		l:    l,
+		l: l,
 		client: &http.Client{
 			Timeout: time.Second * 40,
 		},
 	}
 }
 
-func (ld *SyncrangeHTTPTransport) GetLastData(ctx context.Context, ldReq structures.SyncDataRequest) (ldr structures.SyncDataResponse, backoff bool, err error) {
+func (ld *SyncrangeHTTPTransport) GetLastData(ctx context.Context, t coreStructs.Target, ldReq structures.SyncDataRequest) (ldr structures.SyncDataResponse, backoff bool, err error) {
 
 	var adc AdditionalConfig
-
-	t, ok := ld.dest.Get(destination.NVCKey{Network: ldReq.Network, Version: ldReq.Version, ChainID: ldReq.ChainID, ConnType: ConnectionTypeHTTP})
-	if !ok {
-		return ldr, false, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", coreStructs.ErrNoWorkersAvailable)}
-	}
-
 	ad, ok := t.AdditionalConfig[syncrange.RunnerName]
 	if ok {
 		adc = setAdditionalConfig(ad)

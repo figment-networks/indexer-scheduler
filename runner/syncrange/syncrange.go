@@ -14,6 +14,14 @@ import (
 	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
 )
 
+type SyncRangeTransporter interface {
+	GetLastData(context.Context, coreStructs.Target, structures.SyncDataRequest) (lastResponse structures.SyncDataResponse, backoff bool, err error)
+}
+
+type TargetGetter interface {
+	Get(nv coreStructs.NVCKey) (t coreStructs.Target, ok bool)
+}
+
 const RunnerName = "syncrange"
 
 type SyncRangeConfig struct {
@@ -52,23 +60,27 @@ func SyncRangeFromMapInterface(a map[string]interface{}) (src SyncRangeConfig, o
 	return src, true
 }
 
-type SyncRangeTransporter interface {
-	GetLastData(context.Context, structures.SyncDataRequest) (lastResponse structures.SyncDataResponse, backoff bool, err error)
-}
-
 type Client struct {
-	store     *persistence.SyncRangeStorageTransport
-	transport SyncRangeTransporter
-	m         *monitor.Monitor
+	transport map[string]SyncRangeTransporter
+	dest      TargetGetter
+
+	store *persistence.SyncRangeStorageTransport
+	m     *monitor.Monitor
 }
 
-func NewClient(store *persistence.SyncRangeStorageTransport, transport SyncRangeTransporter) *Client {
+func NewClient(store *persistence.SyncRangeStorageTransport, dest TargetGetter) *Client {
 	return &Client{
 		store:     store,
-		transport: transport,
+		dest:      dest,
+		transport: make(map[string]SyncRangeTransporter),
 		m:         monitor.NewMonitor(store),
 	}
 }
+
+func (c *Client) AddTransport(typeS string, tr SyncRangeTransporter) {
+	c.transport[typeS] = tr
+}
+
 func (c *Client) Name() string {
 	return RunnerName
 }
@@ -83,7 +95,6 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 	if !ok {
 		return false, &coreStructs.RunError{Contents: fmt.Errorf("error parsing syncrange config:  %+v", rcp.Config)}
 	}
-
 	latest, err := c.store.GetLatest(ctx, rcp)
 	if err != nil && err != params.ErrNotFound {
 		return false, &coreStructs.RunError{Contents: fmt.Errorf("error getting data from store GetLatest [%s]:  %w", RunnerName, err)}
@@ -101,7 +112,17 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 		RetryCount: latest.RetryCount,
 	}
 
-	resp, backoff, err := c.transport.GetLastData(ctx, structures.SyncDataRequest{
+	t, ok := c.dest.Get(coreStructs.NVCKey{Network: rcp.Network, Version: rcp.Version, ChainID: rcp.ChainID})
+	if !ok {
+		return false, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", coreStructs.ErrNoWorkersAvailable)}
+	}
+
+	tr, ok := c.transport[t.ConnType]
+	if !ok {
+		return false, &coreStructs.RunError{Contents: fmt.Errorf("no such transport of lastdata as :  %s", t.ConnType)}
+	}
+
+	resp, backoff, err := tr.GetLastData(ctx, t, structures.SyncDataRequest{
 		Network: rcp.Network,
 		ChainID: rcp.ChainID,
 		Version: rcp.Version,

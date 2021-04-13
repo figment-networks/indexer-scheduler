@@ -63,3 +63,27 @@ func (re *RunError) Error() string {
 func (re *RunError) IsRecoverable() bool {
 	return !re.Unrecoverable
 }
+
+type Target struct {
+	ChainID          string                 `json:"chain_id"`
+	Network          string                 `json:"network"`
+	Version          string                 `json:"version"`
+	Address          string                 `json:"address"`
+	ConnType         string                 `json:"conn_type"`
+	AdditionalConfig map[string]interface{} `json:"additional"`
+}
+
+type TargetConfig struct {
+	Target
+	Type string `json:"type"`
+}
+
+type NVCKey struct {
+	Network string
+	Version string
+	ChainID string
+}
+
+func (nv NVCKey) String() string {
+	return fmt.Sprintf("%s:%s (%s) %s", nv.Network, nv.ChainID, nv.Version)
+}

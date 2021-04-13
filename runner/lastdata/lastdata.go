@@ -16,22 +16,33 @@ import (
 const RunnerName = "lastdata"
 
 type LastDataTransporter interface {
-	GetLastData(context.Context, structures.LatestDataRequest) (lastResponse structures.LatestDataResponse, backoff bool, err error)
+	GetLastData(context.Context, coreStructs.Target, structures.LatestDataRequest) (lastResponse structures.LatestDataResponse, backoff bool, err error)
+}
+
+type TargetGetter interface {
+	Get(nv coreStructs.NVCKey) (t coreStructs.Target, ok bool)
 }
 
 type Client struct {
 	store     *persistence.LastDataStorageTransport
-	transport LastDataTransporter
+	transport map[string]LastDataTransporter
+	dest      TargetGetter
 	m         *monitor.Monitor
 }
 
-func NewClient(store *persistence.LastDataStorageTransport, transport LastDataTransporter) *Client {
+func NewClient(store *persistence.LastDataStorageTransport, dest TargetGetter) *Client {
 	return &Client{
 		store:     store,
-		transport: transport,
+		dest:      dest,
+		transport: make(map[string]LastDataTransporter),
 		m:         monitor.NewMonitor(store),
 	}
 }
+
+func (c *Client) AddTransport(typeS string, tr LastDataTransporter) {
+	c.transport[typeS] = tr
+}
+
 func (c *Client) Name() string {
 	return RunnerName
 }
@@ -50,7 +61,17 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 		RetryCount: latest.RetryCount,
 	}
 
-	resp, backoff, err := c.transport.GetLastData(ctx, structures.LatestDataRequest{
+	t, ok := c.dest.Get(coreStructs.NVCKey{Network: rcp.Network, Version: rcp.Version, ChainID: rcp.ChainID})
+	if !ok {
+		return false, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", coreStructs.ErrNoWorkersAvailable)}
+	}
+
+	tr, ok := c.transport[t.ConnType]
+	if !ok {
+		return false, &coreStructs.RunError{Contents: fmt.Errorf("no such transport of lastdata as :  %s", t.ConnType)}
+	}
+
+	resp, backoff, err := tr.GetLastData(ctx, t, structures.LatestDataRequest{
 		Network: rcp.Network,
 		ChainID: rcp.ChainID,
 		Version: rcp.Version,

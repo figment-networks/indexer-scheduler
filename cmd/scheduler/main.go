@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/figment-networks/indexer-scheduler/cmd/scheduler/config"
+	"github.com/figment-networks/indexer-scheduler/conn/tray"
 	"github.com/figment-networks/indexer-scheduler/core"
 	"github.com/figment-networks/indexer-scheduler/destination"
 	"github.com/figment-networks/indexer-scheduler/persistence"
@@ -142,6 +143,9 @@ func main() {
 	scheme := destination.NewScheme(logger)
 	scheme.RegisterHandles(mux)
 
+	connTray := tray.NewConnTray(logger)
+	cont := destination.NewContainer(logger)
+
 	if err := c.InitialLoad(ctx); err != nil {
 		logger.Error("[Scheduler] Error during initial load of scheduler", zap.Error(err))
 		logger.Sync()
@@ -206,7 +210,7 @@ func main() {
 			return
 		}
 
-		trgts := []destination.Target{}
+		trgts := []structures.TargetConfig{}
 		for _, fileInfo := range files {
 			if fileInfo.IsDir() {
 				continue
@@ -227,7 +231,7 @@ func main() {
 			}
 
 			for _, trgt := range trgts {
-				scheme.Add(trgt)
+				cont.Add(ctx, trgt, connTray, scheme)
 			}
 		}
 	}
@@ -237,16 +241,17 @@ func main() {
 
 	mux.Handle("/metrics", metrics.Handler())
 
-	rHTTP := runnerHTTP.NewLastDataHTTPTransport(scheme, logger)
 	pStore := runnerPersistence.NewLastDataStorageTransport(runnerDatabase.NewDriver(db))
 
-	lh := lastdata.NewClient(pStore, rHTTP)
+	lh := lastdata.NewClient(pStore, scheme)
+	rHTTP := runnerHTTP.NewLastDataHTTPTransport(logger)
+	lh.AddTransport(runnerHTTP.ConnectionTypeHTTP, rHTTP)
 	lh.RegisterHandles(mux)
 
 	pSRStore := runnerSyncrangePersistence.NewLastDataStorageTransport(runnerSyncrangeDatabase.NewDriver(db))
-	rsSRHTTP := runnerSyncrangeHTTP.NewSyncrangeHTTPTransport(scheme, logger)
-
-	sr := syncrange.NewClient(pSRStore, rsSRHTTP)
+	sr := syncrange.NewClient(pSRStore, scheme)
+	rsSRHTTP := runnerSyncrangeHTTP.NewSyncrangeHTTPTransport(logger)
+	sr.AddTransport(runnerSyncrangeHTTP.ConnectionTypeHTTP, rsSRHTTP)
 	sr.RegisterHandles(mux)
 
 	c.LoadRunner(lastdata.RunnerName, lh)

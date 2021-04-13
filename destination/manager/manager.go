@@ -1,27 +1,33 @@
 package manager
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"net/http"
-	"sync"
+	"net"
 	"time"
 
-	"github.com/figment-networks/indexer-scheduler/destination"
+	"github.com/figment-networks/indexer-scheduler/conn"
+	"github.com/figment-networks/indexer-scheduler/conn/tray"
+	"github.com/figment-networks/indexer-scheduler/structures"
 	"go.uber.org/zap"
 )
 
-var WorkerStateOnline int64 = 1
-
-type Scheme struct {
-	destinations    map[destination.NVCKey][]destination.Target
-	destinationLock sync.RWMutex
-
-	logger *zap.Logger
-
-	managers map[string]map[destination.NVCKey]bool
+type TargetAdder interface {
+	Add(t structures.Target)
+	Remove(t structures.Target)
 }
+
+type StreamState int
+
+const (
+	StreamUnknown StreamState = iota
+	StreamOnline
+	StreamError
+	StreamReconnecting
+	StreamClosing
+	StreamOffline
+)
 
 type WorkerNetworkStatic struct {
 	Workers map[string]WorkerInfoStatic `json:"workers"`
@@ -32,122 +38,125 @@ type WorkerNetworkStatic struct {
 type WorkerInfoStatic struct {
 	NodeSelfID     string             `json:"node_id"`
 	Type           string             `json:"type"`
-	State          int64              `json:"state"`
+	ChainID        string             `json:"chain_id"`
+	State          StreamState        `json:"state"`
 	ConnectionInfo []WorkerConnection `json:"connection"`
 	LastCheck      time.Time          `json:"last_check"`
 }
 
 type WorkerConnection struct {
-	Version string `json:"version"`
-	ChainID string `json:"chain_id"`
-	Type    string `json:"type"`
+	Version   string          `json:"version"`
+	Type      string          `json:"type"`
+	Addresses []WorkerAddress `json:"addresses"`
 }
 
-func NewScheme(logger *zap.Logger) *Scheme {
-	return &Scheme{
-		logger:       logger,
-		destinations: make(map[destination.NVCKey][]destination.Target),
-		managers:     make(map[string]map[destination.NVCKey]bool),
+type WorkerAddress struct {
+	IP      net.IP `json:"ip"`
+	Address string `json:"address"`
+}
+
+type Manager struct {
+	logger *zap.Logger
+	ta     TargetAdder
+	nodes  map[string]WorkerInfoStatic // NodeSelfID
+}
+
+func NewManager(logger *zap.Logger, ta TargetAdder) *Manager {
+	return &Manager{
+		logger: logger,
+		ta:     ta,
+		nodes:  make(map[string]WorkerInfoStatic),
 	}
 }
 
-func (s *Scheme) Add(t destination.Target) {
-	s.destinationLock.Lock()
-	defer s.destinationLock.Unlock()
+func (m *Manager) Load(ctx context.Context, t structures.Target, ct *tray.ConnTray) {
 
-	i, ok := s.destinations[destination.NVCKey{t.Network, t.Version, t.ChainID, t.ConnType}]
-	if !ok {
-		i = []destination.Target{}
-	}
-	i = append(i, t)
-
-	s.destinations[destination.NVCKey{t.Network, t.Version, t.ChainID, t.ConnType}] = i
-}
-
-func (s *Scheme) Get(nv destination.NVCKey) (t destination.Target, ok bool) {
-	s.destinationLock.RLock()
-	defer s.destinationLock.RUnlock()
-
-	d, ok := s.destinations[nv]
-	if !ok {
-		return t, false
-	}
-	return d[0], ok
-}
-
-func (s *Scheme) AddManager(address string) {
-	s.destinationLock.Lock()
-	defer s.destinationLock.Unlock()
-
-	if _, ok := s.managers[address]; ok {
-		return // (lukanus) already added
+	rcpconn, err := ct.Get(t.ConnType, t.Address)
+	if err != nil {
+		m.logger.Error("error getting connection", zap.Error(err))
 	}
 
-	s.logger.Info("[Scheme] Adding Manager", zap.String("address", address))
-	s.managers[address] = make(map[destination.NVCKey]bool)
-}
+	ch := make(chan conn.Response, 10)
+	defer close(ch)
 
-func (s *Scheme) Refresh(ctx context.Context) error {
-	c := http.Client{}
+	readr := new(bytes.Reader)
+	dec := json.NewDecoder(readr)
 
-	s.destinationLock.Lock()
-	defer s.destinationLock.Unlock()
-	for address := range s.managers {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+address+"/get_workers", nil)
-		if err != nil {
-			return fmt.Errorf("error creating request: %w", err)
-		}
-
-		wns := map[string]WorkerNetworkStatic{}
-
-		resp, err := c.Do(req)
-		if err != nil {
-			return fmt.Errorf("error making request to  %s : %w", "http://"+address+"/get_workers", err)
-		}
-
-		dec := json.NewDecoder(resp.Body)
-		err = dec.Decode(&wns)
-		resp.Body.Close()
-		if err != nil {
-			return fmt.Errorf("error making request to  %s : %w", "http://"+address+"/get_workers", err)
-		}
-
-		k := make(map[destination.NVCKey]bool)
-
-		for network, sub := range wns {
-			for _, w := range sub.Workers {
-				for _, ci := range w.ConnectionInfo {
-					k[destination.NVCKey{Network: network, Version: ci.Version, ChainID: ci.ChainID}] = (w.State == WorkerStateOnline)
-				}
-			}
-		}
-
-		s.managers[address] = nil
-		s.managers[address] = k
-	}
-
-	// (lukanus): link to destination
-	for addr := range s.destinations {
-		delete(s.destinations, addr)
-	}
-
-	for addr, targets := range s.managers {
-		for nv, status := range targets {
-			if !status {
+	tckr := time.NewTicker(time.Second * 10)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tckr.C:
+			rcpconn.Send(ch, 0, "get_workers", nil)
+		case resp := <-ch:
+			if resp.Error != nil {
+				m.logger.Error("error getting workers", zap.Error(err))
 				continue
 			}
-			dest, ok := s.destinations[nv]
-			if !ok {
-				dest = []destination.Target{}
+
+			wns := map[string]WorkerNetworkStatic{}
+			readr.Reset(resp.Result)
+			err := dec.Decode(&wns)
+			if resp.Error != nil {
+				m.logger.Error("error decoding worker response", zap.Error(err))
+				continue
 			}
-			dest = append(dest, destination.Target{Network: nv.Network, ChainID: nv.ChainID, Version: nv.Version, Address: addr})
-			s.destinations[nv] = dest
+
+			for network, sub := range wns {
+				for _, w := range sub.Workers {
+					n, ok := m.nodes[w.NodeSelfID]
+					if !ok && w.State == StreamOnline {
+						m.nodes[w.NodeSelfID] = w
+						for _, ci := range w.ConnectionInfo {
+							m.ta.Add(structures.Target{
+								Network:          network,
+								Version:          ci.Version,
+								ChainID:          w.ChainID,
+								Address:          t.Address,
+								ConnType:         t.ConnType,
+								AdditionalConfig: t.AdditionalConfig,
+							})
+						}
+						continue
+					}
+
+					if n.State == StreamOnline && w.State != StreamOnline {
+						for _, ci := range w.ConnectionInfo {
+							m.ta.Remove(structures.Target{
+								Network:  network,
+								Version:  ci.Version,
+								ChainID:  w.ChainID,
+								Address:  t.Address,
+								ConnType: t.ConnType,
+							})
+						}
+					}
+
+					m.nodes[w.NodeSelfID] = w
+				}
+
+				for k, n := range m.nodes {
+					if _, ok := sub.Workers[k]; !ok {
+						for _, ci := range n.ConnectionInfo {
+							m.ta.Remove(structures.Target{
+								Network:  network,
+								Version:  ci.Version,
+								ChainID:  n.ChainID,
+								Address:  t.Address,
+								ConnType: t.ConnType,
+							})
+						}
+						delete(m.nodes, k)
+					}
+				}
+
+			}
 		}
 	}
-
-	return nil
 }
 
+/*
 type schemeOutp struct {
 	Destinations map[string][]destination.Target `json:"destinations"`
 	Managers     map[string]map[string]bool      `json:"managers"`
@@ -178,9 +187,9 @@ func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) 
 	if err := enc.Encode(so); err != nil {
 		s.logger.Error("[Scheme] Error encoding data http ", zap.Error(err))
 	}
-
 }
 
 func (s *Scheme) RegisterHandles(smux *http.ServeMux) {
 	smux.HandleFunc("/scheduler/destination/list", s.handlerListDestination)
 }
+*/

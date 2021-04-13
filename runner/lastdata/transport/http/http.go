@@ -8,13 +8,27 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/figment-networks/indexer-scheduler/destination"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata"
-
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
 	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
 	"go.uber.org/zap"
 )
+
+const ConnectionTypeHTTP = "http"
+
+type LastDataHTTPTransport struct {
+	client *http.Client
+	l      *zap.Logger
+}
+
+func NewLastDataHTTPTransport(l *zap.Logger) *LastDataHTTPTransport {
+	return &LastDataHTTPTransport{
+		l: l,
+		client: &http.Client{
+			Timeout: time.Second * 40,
+		},
+	}
+}
 
 type AdditionalConfig struct {
 	Endpoint string `json:"endpoint"`
@@ -37,34 +51,9 @@ func setAdditionalConfig(in interface{}) (ac AdditionalConfig) {
 	return ac
 
 }
-
-const ConnectionTypeHTTP = "http"
-
-type LastDataHTTPTransport struct {
-	client *http.Client
-	dest   *destination.Scheme
-	l      *zap.Logger
-}
-
-func NewLastDataHTTPTransport(dest *destination.Scheme, l *zap.Logger) *LastDataHTTPTransport {
-	return &LastDataHTTPTransport{
-		dest: dest,
-		l:    l,
-		client: &http.Client{
-			Timeout: time.Second * 40,
-		},
-	}
-}
-
-func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, ldReq structures.LatestDataRequest) (ldr structures.LatestDataResponse, backoff bool, err error) {
+func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, t coreStructs.Target, ldReq structures.LatestDataRequest) (ldr structures.LatestDataResponse, backoff bool, err error) {
 
 	var adc AdditionalConfig
-
-	t, ok := ld.dest.Get(destination.NVCKey{Network: ldReq.Network, Version: ldReq.Version, ChainID: ldReq.ChainID, ConnType: ConnectionTypeHTTP})
-	if !ok {
-		return ldr, false, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", coreStructs.ErrNoWorkersAvailable)}
-	}
-
 	ad, ok := t.AdditionalConfig[lastdata.RunnerName]
 	if ok {
 		adc = setAdditionalConfig(ad)

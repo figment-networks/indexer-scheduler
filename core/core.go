@@ -214,7 +214,6 @@ func (c *Core) RegisterHandles(smux *http.ServeMux) {
 	smux.HandleFunc("/scheduler/core/list", c.handlerListSchedule)
 	smux.HandleFunc("/scheduler/core/enable/", c.handlerEnableSchedule)
 	smux.HandleFunc("/scheduler/core/disable/", c.handlerDisableSchedule)
-
 	smux.HandleFunc("/scheduler/core/addTask/", c.handlerAddSchedule)
 }
 
