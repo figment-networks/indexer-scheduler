@@ -35,6 +35,7 @@ import (
 	runnerPersistence "github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
 	runnerDatabase "github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence/postgresstore"
 	runnerHTTP "github.com/figment-networks/indexer-scheduler/runner/lastdata/transport/http"
+	runnerWS "github.com/figment-networks/indexer-scheduler/runner/lastdata/transport/ws"
 
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange"
 	runnerSyncrangePersistence "github.com/figment-networks/indexer-scheduler/runner/syncrange/persistence"
@@ -246,7 +247,8 @@ func main() {
 	lh := lastdata.NewClient(pStore, scheme)
 	rHTTP := runnerHTTP.NewLastDataHTTPTransport(logger)
 	lh.AddTransport(runnerHTTP.ConnectionTypeHTTP, rHTTP)
-	lh.RegisterHandles(mux)
+	rWS := runnerWS.NewLastDataWSTransport(logger, connTray)
+	lh.AddTransport(runnerWS.ConnectionTypeWS, rWS)
 
 	pSRStore := runnerSyncrangePersistence.NewLastDataStorageTransport(runnerSyncrangeDatabase.NewDriver(db))
 	sr := syncrange.NewClient(pSRStore, scheme)
