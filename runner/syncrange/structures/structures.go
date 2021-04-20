@@ -21,9 +21,12 @@ type SyncDataRequest struct {
 	Version string `json:"version"`
 	TaskID  string `json:"task_id"`
 
-	LastHash   string    `json:"last_hash"`
-	LastEpoch  string    `json:"last_epoch"`
-	LastHeight uint64    `json:"last_height"`
+	LastHeight  uint64 `json:"last_height"`
+	FinalHeight uint64 `json:"final_height"`
+
+	LastHash  string `json:"last_hash"`
+	LastEpoch string `json:"last_epoch"`
+
 	LastTime   time.Time `json:"last_time"`
 	RetryCount uint64    `json:"retry_count"`
 	Nonce      []byte    `json:"nonce"`

@@ -128,7 +128,9 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 		Version: rcp.Version,
 		TaskID:  rcp.TaskID,
 
-		LastHeight: latest.Height,
+		LastHeight:  latest.Height,
+		FinalHeight: mi.HeightTo,
+
 		LastHash:   latest.Hash,
 		LastTime:   latest.LastTime,
 		Nonce:      latest.Nonce,
