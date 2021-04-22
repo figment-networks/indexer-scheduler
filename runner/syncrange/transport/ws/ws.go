@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/figment-networks/indexer-scheduler/conn/tray"
-	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
+	"github.com/figment-networks/indexer-scheduler/runner/syncrange/structures"
 	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
 
 	"github.com/figment-networks/indexer-scheduler/conn"
@@ -17,20 +17,20 @@ import (
 
 const ConnectionTypeWS = "ws"
 
-type LastDataWSTransport struct {
+type SyncRangeWSTransport struct {
 	l      *zap.Logger
 	ct     *tray.ConnTray
 	nextID uint64
 }
 
-func NewLastDataWSTransport(l *zap.Logger, ct *tray.ConnTray) *LastDataWSTransport {
-	return &LastDataWSTransport{
+func NewSyncRangeWSTransport(l *zap.Logger, ct *tray.ConnTray) *SyncRangeWSTransport {
+	return &SyncRangeWSTransport{
 		l:  l,
 		ct: ct,
 	}
 }
 
-func (ld *LastDataWSTransport) GetLastData(ctx context.Context, t coreStructs.Target, ldReq structures.LatestDataRequest) (ldr structures.LatestDataResponse, backoff bool, err error) {
+func (ld *SyncRangeWSTransport) GetLastData(ctx context.Context, t coreStructs.Target, ldReq structures.SyncDataRequest) (ldr structures.SyncDataResponse, backoff bool, err error) {
 	ld.l.Info("Running LastData",
 		zap.String("network", ldReq.Network),
 		zap.String("chain_id", ldReq.ChainID),
@@ -40,17 +40,17 @@ func (ld *LastDataWSTransport) GetLastData(ctx context.Context, t coreStructs.Ta
 		zap.Uint64("retry_count", ldReq.RetryCount),
 	)
 
-	ch := make(chan conn.Response, 1) // todo(lukanus): make it pool
-	defer close(ch)
-
 	rpc, err := ld.ct.Get(ConnectionTypeWS, t.Address)
 	if err != nil {
 		return ldr, true, &coreStructs.RunError{Contents: fmt.Errorf("error getting connection:  %w", err)}
 	}
 
+	ch := make(chan conn.Response, 1)
+	defer close(ch)
+
 	ld.nextID++
 	sent := ld.nextID
-	rpc.Send(ch, sent, "last_data", []interface{}{ldReq})
+	rpc.Send(ch, sent, "sync_range", []interface{}{ldReq})
 	var resp conn.Response
 
 WAIT_FOR_MESSAGE:
@@ -65,7 +65,7 @@ WAIT_FOR_MESSAGE:
 			}
 			ld.l.Warn("Outstanding message passed", zap.Any("response", resp))
 		case <-time.After(time.Minute * 5):
-			return structures.LatestDataResponse{
+			return structures.SyncDataResponse{
 				LastHash:   ldReq.LastHash,
 				LastHeight: ldReq.LastHeight,
 				LastTime:   ldReq.LastTime,
@@ -76,18 +76,15 @@ WAIT_FOR_MESSAGE:
 		}
 	}
 
-	ldrr := &structures.LatestDataResponse{}
-	if len(resp.Result) == 0 {
-		dec := json.NewDecoder(bytes.NewReader(resp.Result))
+	ldrr := &structures.SyncDataResponse{}
+	dec := json.NewDecoder(bytes.NewReader(resp.Result))
 
-		if err = dec.Decode(ldrr); err != nil {
-			return *ldrr, false, &coreStructs.RunError{Contents: fmt.Errorf("error decoding response:  %w", err)}
-		}
+	if err = dec.Decode(ldrr); err != nil {
+		return *ldrr, false, &coreStructs.RunError{Contents: fmt.Errorf("error decoding response:  %w", err)}
 	}
-
 	// Still processing
 	if ldrr.Processing {
-		return structures.LatestDataResponse{
+		return structures.SyncDataResponse{
 			LastHash:   ldReq.LastHash,
 			LastHeight: ldReq.LastHeight,
 			LastTime:   ldReq.LastTime,

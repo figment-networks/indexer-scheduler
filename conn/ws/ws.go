@@ -29,12 +29,18 @@ type JsonRPCSend struct {
 	RespCH chan conn.Response
 }
 
+type JsonRPCError struct {
+	Code    int64         `json:"code"`
+	Message string        `json:"message"`
+	Data    []interface{} `json:"data"`
+}
+
 type JsonRPCResponse struct {
 	ID      uint64          `json:"id"`
 	JSONRPC string          `json:"jsonrpc"`
+	Error   *JsonRPCError   `json:"error,omitempty"`
 	Result  json.RawMessage `json:"result"`
 }
-
 type ResponseStore struct {
 	ID     uint64 `json:"id"` // originalID
 	Type   string
@@ -84,11 +90,18 @@ func (co *Conn) recv(ctx context.Context, c *websocket.Conn, done chan struct{},
 
 		resps.L.Lock()
 		ch := resps.Map[res.ID]
-		ch.RespCH <- conn.Response{
+
+		response := conn.Response{
 			ID:     ch.ID,
 			Type:   ch.Type,
 			Result: res.Result,
 		}
+
+		if res.Error != nil {
+			response.Error = fmt.Errorf("error in service %s", res.Error.Message)
+		}
+
+		ch.RespCH <- response
 		delete(resps.Map, res.ID)
 		resps.L.Unlock()
 	}

@@ -35,7 +35,6 @@ func setAdditionalConfig(in interface{}) (ac AdditionalConfig) {
 	}
 
 	return ac
-
 }
 
 type SyncrangeHTTPTransport struct {
