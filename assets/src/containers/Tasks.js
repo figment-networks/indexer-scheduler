@@ -61,7 +61,7 @@ class Tasks extends Component {
 
   render() {
     const { list, isFetching } = this.props
-    const isEmpty = list.length === 0
+    const isEmpty =  (list === null || list.length === 0)
     return (
       <Container>
         <Row >

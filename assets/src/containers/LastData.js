@@ -35,7 +35,7 @@ class LastData extends Component {
 
   render() {
     const { list, isFetching, network, chain_id, kind, task_id } = this.props
-    const isEmpty = list.length === 0
+    const isEmpty = (list === null || list.length === 0)
     return (
       <Container>
         {isEmpty ? ""
