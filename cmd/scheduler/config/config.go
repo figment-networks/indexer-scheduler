@@ -31,8 +31,8 @@ type Config struct {
 	RollbarAccessToken string `json:"rollbar_access_token" envconfig:"ROLLBAR_ACCESS_TOKEN"`
 	RollbarServerRoot  string `json:"rollbar_server_root" envconfig:"ROLLBAR_SERVER_ROOT" default:"github.com/figment-networks/indexer-scheduler"`
 
-	SchedulesConfig    string `json:"schedules_config_path" envconfig:"SCHEDULES_CONFIG"`
-	DestinationsConfig string `json:"destinations_config_path" envconfig:"DESTINATIONS_CONFIG"`
+	SchedulesConfig    string `json:"schedules_config" envconfig:"SCHEDULES_CONFIG"`
+	DestinationsConfig string `json:"destinations_config" envconfig:"DESTINATIONS_CONFIG"`
 
 	HealthCheckInterval time.Duration `json:"health_check_interval" envconfig:"HEALTH_CHECK_INTERVAL" default:"10s"`
 }

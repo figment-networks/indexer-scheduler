@@ -203,10 +203,12 @@ func main() {
 			logger.Fatal("Error adding schedules", zap.Error(err))
 			return
 		}
+	}
 
+	if cfg.DestinationsConfig != "" {
 		logger.Info("[Scheduler] Loading destinations initial config")
 
-		files, err = ioutil.ReadDir(cfg.DestinationsConfig)
+		files, err := ioutil.ReadDir(cfg.DestinationsConfig)
 		if err != nil {
 			logger.Fatal("Error reading scheduling config dir", zap.Error(err))
 			return
