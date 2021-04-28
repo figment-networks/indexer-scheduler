@@ -16,7 +16,7 @@ func NewMonitor(store persistence.PDriver) *Monitor {
 }
 
 func (m *Monitor) RegisterHandles(mux *http.ServeMux) {
-	mux.HandleFunc("/scheduler/runner/syncrange/listRunning", m.handlerListRunning)
+	mux.HandleFunc("/scheduler/runner/syncrange/listRunning/", m.handlerListRunning)
 }
 
 type ListRunningRequestPayload struct {

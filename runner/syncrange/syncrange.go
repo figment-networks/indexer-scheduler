@@ -12,6 +12,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange/persistence"
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange/structures"
 	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
+	"go.uber.org/zap"
 )
 
 type SyncRangeTransporter interface {
@@ -64,15 +65,17 @@ type Client struct {
 	transport map[string]SyncRangeTransporter
 	dest      TargetGetter
 
-	store *persistence.SyncRangeStorageTransport
-	m     *monitor.Monitor
+	store  *persistence.SyncRangeStorageTransport
+	logger *zap.Logger
+	m      *monitor.Monitor
 }
 
-func NewClient(store *persistence.SyncRangeStorageTransport, dest TargetGetter) *Client {
+func NewClient(logger *zap.Logger, store *persistence.SyncRangeStorageTransport, dest TargetGetter) *Client {
 	return &Client{
 		store:     store,
 		dest:      dest,
 		transport: make(map[string]SyncRangeTransporter),
+		logger:    logger,
 		m:         monitor.NewMonitor(store),
 	}
 }
@@ -114,12 +117,17 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 
 	t, ok := c.dest.Get(coreStructs.NVCKey{Network: rcp.Network, Version: rcp.Version, ChainID: rcp.ChainID})
 	if !ok {
-		return false, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", coreStructs.ErrNoWorkersAvailable)}
+		return false, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", coreStructs.ErrNoDestinationAvailable)}
 	}
 
 	tr, ok := c.transport[t.ConnType]
 	if !ok {
 		return false, &coreStructs.RunError{Contents: fmt.Errorf("no such transport of lastdata as :  %s", t.ConnType)}
+	}
+
+	startHeight := latest.Height
+	if latest.Height == 0 {
+		startHeight = mi.HeightFrom
 	}
 
 	resp, backoff, err := tr.GetLastData(ctx, t, structures.SyncDataRequest{
@@ -128,7 +136,7 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 		Version: rcp.Version,
 		TaskID:  rcp.TaskID,
 
-		LastHeight:  latest.Height,
+		LastHeight:  startHeight,
 		FinalHeight: mi.HeightTo,
 
 		LastHash:   latest.Hash,
@@ -161,6 +169,16 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 		backoff = true
 		lrec.RetryCount++
 	}
+
+	c.logger.Info("[SyncData] Response ",
+		zap.String("runner", "lastdata"),
+		zap.String("network", rcp.Network),
+		zap.String("chain_id", rcp.ChainID),
+		zap.String("task_id", rcp.TaskID),
+		zap.Uint64("req_last_height", latest.Height),
+		zap.Uint64("resp_last_height", resp.LastHeight),
+		zap.String("error", string(lrec.Error)),
+	)
 
 	if err2 := c.store.SetLatest(ctx, rcp, lrec); err2 != nil {
 		return false, &coreStructs.RunError{Contents: fmt.Errorf("error writing last record SetLatest [%s]:  %w", RunnerName, err2)}

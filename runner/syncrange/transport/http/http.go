@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -84,7 +86,9 @@ func (ld *SyncrangeHTTPTransport) GetLastData(ctx context.Context, t coreStructs
 	}
 
 	ldrr := &structures.SyncDataResponse{}
-	dec := json.NewDecoder(resp.Body)
+	bod, err := io.ReadAll(resp.Body)
+	log.Println("ldrr", string(bod))
+	dec := json.NewDecoder(bytes.NewReader(bod))
 
 	defer resp.Body.Close()
 

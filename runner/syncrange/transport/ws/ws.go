@@ -31,7 +31,7 @@ func NewSyncRangeWSTransport(l *zap.Logger, ct *tray.ConnTray) *SyncRangeWSTrans
 }
 
 func (ld *SyncRangeWSTransport) GetLastData(ctx context.Context, t coreStructs.Target, ldReq structures.SyncDataRequest) (ldr structures.SyncDataResponse, backoff bool, err error) {
-	ld.l.Info("Running LastData",
+	ld.l.Info("[SyncRange][WS] Running SyncRange",
 		zap.String("network", ldReq.Network),
 		zap.String("chain_id", ldReq.ChainID),
 		zap.String("address", t.Address),
@@ -77,10 +77,12 @@ WAIT_FOR_MESSAGE:
 	}
 
 	ldrr := &structures.SyncDataResponse{}
-	dec := json.NewDecoder(bytes.NewReader(resp.Result))
+	if len(resp.Result) != 0 {
+		dec := json.NewDecoder(bytes.NewReader(resp.Result))
 
-	if err = dec.Decode(ldrr); err != nil {
-		return *ldrr, false, &coreStructs.RunError{Contents: fmt.Errorf("error decoding response:  %w", err)}
+		if err = dec.Decode(ldrr); err != nil {
+			return *ldrr, false, &coreStructs.RunError{Contents: fmt.Errorf("error decoding response:  %w", err)}
+		}
 	}
 	// Still processing
 	if ldrr.Processing {

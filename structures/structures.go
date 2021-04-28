@@ -18,7 +18,7 @@ var (
 )
 
 var (
-	ErrNoWorkersAvailable = errors.New("no workers available")
+	ErrNoDestinationAvailable = errors.New("no destination available")
 )
 
 type RunConfig struct {

@@ -13,16 +13,21 @@ type Targets struct {
 	l sync.RWMutex
 	T []structures.Target
 
-	next int
-	Len  int
+	next  int
+	nextL sync.Mutex
+	Len   int
 }
 
-func (t *Targets) inc() {
+func (t *Targets) inc() int {
+	t.nextL.Lock()
+	defer t.nextL.Unlock()
 	if t.next == t.Len-1 {
 		t.next = 0
 	} else {
 		t.next++
 	}
+
+	return t.next
 }
 
 func (trgs *Targets) Add(t structures.Target) {
@@ -59,9 +64,8 @@ func (trgs *Targets) Remove(t structures.Target) {
 func (trgs *Targets) GetNext() (t structures.Target) {
 	trgs.l.RLock()
 	defer trgs.l.RUnlock()
-	defer trgs.inc()
 
-	return trgs.T[trgs.next]
+	return trgs.T[trgs.inc()]
 }
 
 type Scheme struct {

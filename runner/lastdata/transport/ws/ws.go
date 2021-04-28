@@ -31,7 +31,7 @@ func NewLastDataWSTransport(l *zap.Logger, ct *tray.ConnTray) *LastDataWSTranspo
 }
 
 func (ld *LastDataWSTransport) GetLastData(ctx context.Context, t coreStructs.Target, ldReq structures.LatestDataRequest) (ldr structures.LatestDataResponse, backoff bool, err error) {
-	ld.l.Info("Running LastData",
+	ld.l.Info("[LastData][WS] Running LastData",
 		zap.String("network", ldReq.Network),
 		zap.String("chain_id", ldReq.ChainID),
 		zap.String("address", t.Address),
@@ -77,7 +77,7 @@ WAIT_FOR_MESSAGE:
 	}
 
 	ldrr := &structures.LatestDataResponse{}
-	if len(resp.Result) == 0 {
+	if len(resp.Result) != 0 {
 		dec := json.NewDecoder(bytes.NewReader(resp.Result))
 
 		if err = dec.Decode(ldrr); err != nil {

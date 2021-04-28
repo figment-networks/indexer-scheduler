@@ -8,6 +8,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/persistence/params"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/monitor"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
+	"go.uber.org/zap"
 
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
 	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
@@ -27,13 +28,15 @@ type Client struct {
 	store     *persistence.LastDataStorageTransport
 	transport map[string]LastDataTransporter
 	dest      TargetGetter
+	logger    *zap.Logger
 	m         *monitor.Monitor
 }
 
-func NewClient(store *persistence.LastDataStorageTransport, dest TargetGetter) *Client {
+func NewClient(logger *zap.Logger, store *persistence.LastDataStorageTransport, dest TargetGetter) *Client {
 	return &Client{
 		store:     store,
 		dest:      dest,
+		logger:    logger,
 		transport: make(map[string]LastDataTransporter),
 		m:         monitor.NewMonitor(store),
 	}
@@ -63,7 +66,7 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 
 	t, ok := c.dest.Get(coreStructs.NVCKey{Network: rcp.Network, Version: rcp.Version, ChainID: rcp.ChainID})
 	if !ok {
-		return false, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", coreStructs.ErrNoWorkersAvailable)}
+		return false, &coreStructs.RunError{Contents: fmt.Errorf("error getting response:  %w", coreStructs.ErrNoDestinationAvailable)}
 	}
 
 	tr, ok := c.transport[t.ConnType]
@@ -108,6 +111,16 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 		backoff = true
 		lrec.RetryCount++
 	}
+
+	c.logger.Info("[LastData] Response ",
+		zap.String("runner", "lastdata"),
+		zap.String("network", rcp.Network),
+		zap.String("chain_id", rcp.ChainID),
+		zap.String("task_id", rcp.TaskID),
+		zap.Uint64("req_last_height", latest.Height),
+		zap.Uint64("resp_last_height", resp.LastHeight),
+		zap.String("error", string(lrec.Error)),
+	)
 
 	if err2 := c.store.SetLatest(ctx, rcp, lrec); err2 != nil {
 		return false, &coreStructs.RunError{Contents: fmt.Errorf("error writing last record SetLatest [%s]:  %w", RunnerName, err2)}

@@ -41,6 +41,7 @@ import (
 	runnerSyncrangePersistence "github.com/figment-networks/indexer-scheduler/runner/syncrange/persistence"
 	runnerSyncrangeDatabase "github.com/figment-networks/indexer-scheduler/runner/syncrange/persistence/postgresstore"
 	runnerSyncrangeHTTP "github.com/figment-networks/indexer-scheduler/runner/syncrange/transport/http"
+	runnerSyncrangeWS "github.com/figment-networks/indexer-scheduler/runner/syncrange/transport/ws"
 
 	"github.com/figment-networks/indexer-scheduler/structures"
 
@@ -244,16 +245,20 @@ func main() {
 
 	pStore := runnerPersistence.NewLastDataStorageTransport(runnerDatabase.NewDriver(db))
 
-	lh := lastdata.NewClient(pStore, scheme)
+	lh := lastdata.NewClient(logger, pStore, scheme)
 	rHTTP := runnerHTTP.NewLastDataHTTPTransport(logger)
 	lh.AddTransport(runnerHTTP.ConnectionTypeHTTP, rHTTP)
 	rWS := runnerWS.NewLastDataWSTransport(logger, connTray)
 	lh.AddTransport(runnerWS.ConnectionTypeWS, rWS)
+	lh.RegisterHandles(mux)
 
 	pSRStore := runnerSyncrangePersistence.NewLastDataStorageTransport(runnerSyncrangeDatabase.NewDriver(db))
-	sr := syncrange.NewClient(pSRStore, scheme)
+	sr := syncrange.NewClient(logger, pSRStore, scheme)
 	rsSRHTTP := runnerSyncrangeHTTP.NewSyncrangeHTTPTransport(logger)
 	sr.AddTransport(runnerSyncrangeHTTP.ConnectionTypeHTTP, rsSRHTTP)
+
+	rsWS := runnerSyncrangeWS.NewSyncRangeWSTransport(logger, connTray)
+	sr.AddTransport(runnerWS.ConnectionTypeWS, rsWS)
 	sr.RegisterHandles(mux)
 
 	c.LoadRunner(lastdata.RunnerName, lh)

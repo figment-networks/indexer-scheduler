@@ -49,7 +49,6 @@ func setAdditionalConfig(in interface{}) (ac AdditionalConfig) {
 	}
 
 	return ac
-
 }
 func (ld LastDataHTTPTransport) GetLastData(ctx context.Context, t coreStructs.Target, ldReq structures.LatestDataRequest) (ldr structures.LatestDataResponse, backoff bool, err error) {
 

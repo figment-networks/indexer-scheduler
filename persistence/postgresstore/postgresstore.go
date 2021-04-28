@@ -42,9 +42,11 @@ func (d *Driver) GetConfigs(ctx context.Context) (rcs []structures.RunConfig, er
 		if err := rows.Scan(&rc.ID, &rc.RunID, &rc.Network, &rc.ChainID, &rc.Version, &rc.Duration, &rc.Kind, &rc.TaskID, &rc.Enabled, &rc.Status, &configJSON); err != nil {
 			return nil, err
 		}
+
 		if err := json.Unmarshal(configJSON, &rc.Config); err != nil {
 			return nil, err
 		}
+
 		rcs = append(rcs, rc)
 	}
 
