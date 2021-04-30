@@ -108,8 +108,8 @@ func (s *Scheme) Get(nv structures.NVCKey) (t structures.Target, ok bool) {
 }
 
 func (s *Scheme) Remove(t structures.Target) {
-	s.targetLock.RLock()
-	defer s.targetLock.RUnlock()
+	s.targetLock.Lock()
+	defer s.targetLock.Unlock()
 
 	key := structures.NVCKey{t.Network, t.Version, t.ChainID}
 	targ, ok := s.targets[key]
