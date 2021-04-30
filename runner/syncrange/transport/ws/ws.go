@@ -10,6 +10,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/conn/tray"
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange/structures"
 	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
+	"github.com/google/uuid"
 
 	"github.com/figment-networks/indexer-scheduler/conn"
 	"go.uber.org/zap"
@@ -45,12 +46,14 @@ func (ld *SyncRangeWSTransport) GetLastData(ctx context.Context, t coreStructs.T
 		return ldr, true, &coreStructs.RunError{Contents: fmt.Errorf("error getting connection:  %w", err)}
 	}
 
-	ch := make(chan conn.Response, 1)
+	sID := uuid.New()
+	ch := make(chan conn.Response, 1) // todo(lukanus): make it pool
+	defer rpc.CloseStream(sID.String())
 	defer close(ch)
 
 	ld.nextID++
 	sent := ld.nextID
-	rpc.Send(ch, sent, "sync_range", []interface{}{ldReq})
+	rpc.Send(sID.String(), ch, sent, "sync_range", []interface{}{ldReq})
 	var resp conn.Response
 
 WAIT_FOR_MESSAGE:

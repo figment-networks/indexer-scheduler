@@ -10,5 +10,6 @@ type Response struct {
 }
 
 type RPCConnector interface {
-	Send(ch chan Response, id uint64, method string, params []interface{})
+	Send(streamID string, ch chan Response, id uint64, method string, params []interface{})
+	CloseStream(streamID string) error
 }

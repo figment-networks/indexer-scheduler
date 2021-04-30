@@ -162,6 +162,7 @@ func (c *Client) Run(ctx context.Context, rcp coreStructs.RunConfigParams) (back
 		lrec.Height = latest.Height
 		lrec.Error = resp.Error
 		backoff = true
+		lrec.RetryCount++
 	}
 
 	if err != nil {

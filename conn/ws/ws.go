@@ -26,6 +26,7 @@ type JsonRPCRequest struct {
 
 type JsonRPCSend struct {
 	JsonRPCRequest
+	Sid    string
 	RespCH chan conn.Response
 }
 
@@ -43,6 +44,7 @@ type JsonRPCResponse struct {
 }
 type ResponseStore struct {
 	ID     uint64 `json:"id"` // originalID
+	Sid    string
 	Type   string
 	RespCH chan conn.Response
 }
@@ -50,6 +52,8 @@ type ResponseStore struct {
 type Conn struct {
 	l        *zap.Logger
 	Requests chan JsonRPCSend
+	Closes   chan JsonRPCSend
+	Closed   bool
 }
 
 type LockedResponseMap struct {
@@ -60,13 +64,30 @@ type LockedResponseMap struct {
 func NewConn(l *zap.Logger) *Conn {
 	return &Conn{
 		l:        l,
+		Closes:   make(chan JsonRPCSend),
 		Requests: make(chan JsonRPCSend),
 	}
 }
 
+func (co *Conn) CloseStream(sid string) error {
+	if !co.Closed {
+		resp := make(chan conn.Response)
+		co.Closes <- JsonRPCSend{
+			Sid:    sid,
+			RespCH: resp,
+		}
+		r := <-resp
+		close(resp)
+
+		return r.Error
+	}
+	return nil
+}
+
 // Send is there just because of mock, it doesn't make much sense otherwise
-func (conn *Conn) Send(ch chan conn.Response, id uint64, method string, params []interface{}) {
-	conn.Requests <- JsonRPCSend{
+func (co *Conn) Send(sid string, ch chan conn.Response, id uint64, method string, params []interface{}) {
+	co.Requests <- JsonRPCSend{
+		Sid:            sid,
 		RespCH:         ch,
 		JsonRPCRequest: JsonRPCRequest{ID: id, Method: method, Params: params},
 	}
@@ -159,6 +180,17 @@ func (co *Conn) run(ctx context.Context, addr string, f chan struct{}) {
 WSLOOP:
 	for {
 		select {
+		case cl := <-co.Closes:
+			responseMap.L.Lock()
+		MapClean:
+			for k, rR := range responseMap.Map {
+				if rR.Sid == cl.Sid {
+					delete(responseMap.Map, k)
+					break MapClean
+				}
+			}
+			responseMap.L.Unlock()
+			cl.RespCH <- conn.Response{}
 		case <-ctx.Done():
 			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			if err != nil {
@@ -173,6 +205,7 @@ WSLOOP:
 		case <-done:
 			break WSLOOP
 		case req := <-co.Requests:
+
 			originalID := req.ID
 			req.ID = nextMessageID
 			if req.JSONRPC == "" {
@@ -191,6 +224,7 @@ WSLOOP:
 			responseMap.L.Lock()
 			responseMap.Map[req.ID] = ResponseStore{
 				ID:     originalID,
+				Sid:    req.Sid,
 				Type:   req.Method,
 				RespCH: req.RespCH,
 			}
@@ -203,8 +237,10 @@ WSLOOP:
 			}
 		}
 	}
+	co.Closed = true
 	responseMap.L.RLock()
 	for _, resp := range responseMap.Map {
+		// send on closed
 		resp.RespCH <- conn.Response{
 			ID:    resp.ID,
 			Type:  resp.Type,

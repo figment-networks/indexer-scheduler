@@ -10,6 +10,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/conn/tray"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
 	coreStructs "github.com/figment-networks/indexer-scheduler/structures"
+	"github.com/google/uuid"
 
 	"github.com/figment-networks/indexer-scheduler/conn"
 	"go.uber.org/zap"
@@ -40,17 +41,19 @@ func (ld *LastDataWSTransport) GetLastData(ctx context.Context, t coreStructs.Ta
 		zap.Uint64("retry_count", ldReq.RetryCount),
 	)
 
-	ch := make(chan conn.Response, 1) // todo(lukanus): make it pool
-	defer close(ch)
-
 	rpc, err := ld.ct.Get(ConnectionTypeWS, t.Address)
 	if err != nil {
 		return ldr, true, &coreStructs.RunError{Contents: fmt.Errorf("error getting connection:  %w", err)}
 	}
 
+	sID := uuid.New()
+	ch := make(chan conn.Response, 1) // todo(lukanus): make it pool
+	defer rpc.CloseStream(sID.String())
+	defer close(ch)
+
 	ld.nextID++
 	sent := ld.nextID
-	rpc.Send(ch, sent, "last_data", []interface{}{ldReq})
+	rpc.Send(sID.String(), ch, sent, "last_data", []interface{}{ldReq})
 	var resp conn.Response
 
 WAIT_FOR_MESSAGE:
