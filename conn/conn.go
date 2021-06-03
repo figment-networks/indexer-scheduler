@@ -1,6 +1,8 @@
 package conn
 
-import "encoding/json"
+import (
+	"encoding/json"
+)
 
 type Response struct {
 	ID     uint64
@@ -10,6 +12,6 @@ type Response struct {
 }
 
 type RPCConnector interface {
-	Send(streamID string, ch chan Response, id uint64, method string, params []interface{})
+	Send(streamID string, ch chan Response, id uint64, method string, params []interface{}) error
 	CloseStream(streamID string) error
 }

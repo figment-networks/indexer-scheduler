@@ -82,7 +82,6 @@ WAIT_FOR_MESSAGE:
 	ldrr := &structures.SyncDataResponse{}
 	if len(resp.Result) != 0 {
 		dec := json.NewDecoder(bytes.NewReader(resp.Result))
-
 		if err = dec.Decode(ldrr); err != nil {
 			return *ldrr, false, &coreStructs.RunError{Contents: fmt.Errorf("error decoding response:  %w", err)}
 		}

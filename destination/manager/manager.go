@@ -10,6 +10,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/conn"
 	"github.com/figment-networks/indexer-scheduler/conn/tray"
 	"github.com/figment-networks/indexer-scheduler/structures"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -76,7 +77,9 @@ func (m *Manager) Load(ctx context.Context, t structures.Target, ct *tray.ConnTr
 		m.logger.Error("error getting connection", zap.Error(err))
 	}
 
+	sID := uuid.New()
 	ch := make(chan conn.Response, 10)
+	defer rcpconn.CloseStream(sID.String())
 	defer close(ch)
 
 	readr := new(bytes.Reader)
@@ -88,7 +91,7 @@ func (m *Manager) Load(ctx context.Context, t structures.Target, ct *tray.ConnTr
 		case <-ctx.Done():
 			return
 		case <-tckr.C:
-			rcpconn.Send(ch, 0, "get_workers", nil)
+			rcpconn.Send(sID.String(), ch, 0, "get_workers", nil)
 		case resp := <-ch:
 			if resp.Error != nil {
 				m.logger.Error("error getting workers", zap.Error(err))

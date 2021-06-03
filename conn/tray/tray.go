@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/figment-networks/indexer-scheduler/conn"
 	"github.com/figment-networks/indexer-scheduler/conn/ws"
@@ -36,7 +37,7 @@ func (c *ConnTray) Get(protocol, address string) (conn.RPCConnector, error) {
 	switch protocol {
 	case "ws":
 		wsConn := ws.NewConn(c.logger)
-		go wsConn.Run(context.Background(), address)
+		go wsConn.Run(context.Background(), address, time.Minute*20)
 		c.conns[PAKey{protocol, address}] = wsConn
 		return wsConn, nil
 	case "http": // todo implement http
@@ -45,8 +46,4 @@ func (c *ConnTray) Get(protocol, address string) (conn.RPCConnector, error) {
 		return nil, errors.New("unknown protocol")
 
 	}
-
-	//ch := make(chan ws.Response, 10)
-	//wsConn.Send(ch, 1, "get_workers", []interface{}{1232, "34543543"})
-
 }
