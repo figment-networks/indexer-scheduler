@@ -20,7 +20,7 @@
         "eject": "react-scripts eject",
         "test": "react-scripts test --env=node --passWithNoTests"
     },
-    "homepage": "http://0.0.0.0:8889/assets",
+    "homepage": "http://0.0.0.0:8889/ui",
     "browserslist": [
         ">0.2%",
         "not dead",

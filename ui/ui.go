@@ -23,6 +23,6 @@ func (ui *UI) RegisterHandles(mux *http.ServeMux) error {
 		return err
 	}
 
-	mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.FS(fsys))))
+	mux.Handle("/ui/", http.StripPrefix("/ui/", http.FileServer(http.FS(fsys))))
 	return nil
 }

@@ -6,12 +6,6 @@ networks:
     driver: overlay
     attachable: true
 
-configs:
-  node_rules:
-    file: .monitoring/prometheus/rules/swarm_node.rules.yml
-  task_rules:
-    file: .monitoring/prometheus/rules/swarm_task.rules.yml
-
 volumes:
   postgresdatabase: {}
   schedule: {}
@@ -22,7 +16,7 @@ services:
     networks:
       - internal
     ports:
-      - "5432:5432"
+      - "5431:5432"
     environment:
       POSTGRES_USER: scheduler
       POSTGRES_PASSWORD: scheduler
