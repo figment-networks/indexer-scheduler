@@ -41,11 +41,17 @@ pack-release:
 generate:
 	go generate ./...
 
+.PHONY: prepare-ui-install-modules
+prepare-ui-install-modules:
+	set NODE_ENV=development
+	cd ./assets; npm install
+
 
 .PHONY: prepare-ui
 prepare-ui:
 	set NODE_ENV=development
 	cd ./assets; npm run build;
+	mkdir -p ./ui
 	rm -rf ./ui/assets
 	mkdir ./ui/assets/
 	cp -r ./assets/build/* ./ui/assets/
