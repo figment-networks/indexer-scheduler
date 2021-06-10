@@ -48,7 +48,7 @@ deployments:
           port: 8075
           targetPort: 8075
           protocol: TCP
-    replicas: 3
+    replicas: 1
     pod:
       containers:
         indexer-scheduler:
