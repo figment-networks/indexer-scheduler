@@ -8,7 +8,7 @@ global:
     DATABASE_URL:
       secretsManagerKeyRef:
         key: production/indexers/scheduler
-        property: database_dsn
+        property: db_dsn
     AUTH_USER:
       secretsManagerKeyRef:
         key: production/indexers/scheduler
