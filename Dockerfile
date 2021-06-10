@@ -32,6 +32,7 @@ COPY ./destination ./destination
 COPY ./persistence ./persistence
 COPY ./process ./process
 COPY ./runner ./runner
+COPY ./http ./http
 COPY ./structures ./structures
 COPY ./ui/ui.go ./ui/ui.go
 
@@ -41,7 +42,7 @@ ENV CGO_ENABLED=0
 ENV GOARCH=amd64
 ENV GOOS=linux
 
-RUN make build && make build-migration
+RUN make build build-migration
 
 # ------------------------------------------------------------------------------
 # Target Image
