@@ -1,6 +1,6 @@
 apiVersion: v2
-name: indexer-search
-description: Transaction search service
+name: indexer-scheduler
+description: Indexer scheduler service
 type: application
 version: 0.0.1
 dependencies:
