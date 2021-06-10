@@ -4,16 +4,18 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
 )
 
 type Monitor struct {
 	store persistence.PDriver
+	creds auth.AuthCredentials
 }
 
-func NewMonitor(store persistence.PDriver) *Monitor {
-	return &Monitor{store}
+func NewMonitor(store persistence.PDriver, creds auth.AuthCredentials) *Monitor {
+	return &Monitor{store, creds}
 }
 
 func (m *Monitor) RegisterHandles(mux *http.ServeMux) {
@@ -30,6 +32,10 @@ type ListRunningRequestPayload struct {
 }
 
 func (m *Monitor) handlerListRunning(w http.ResponseWriter, r *http.Request) {
+	if err := auth.BasicAuth(m.creds, w, r); err != nil {
+		return
+	}
+
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
 
@@ -54,22 +60,3 @@ func (m *Monitor) handlerListRunning(w http.ResponseWriter, r *http.Request) {
 	}
 	enc.Encode(runs)
 }
-
-/*
-func (c *Monitor) handlerListScheduleFor(w http.ResponseWriter, r *http.Request) {
-	s, err := c.ListScheduleFor(r.Context(), "lastdata", "skale", "", 1000)
-	if err != nil {
-		log.Println("error", err)
-	}
-	enc := json.NewEncoder(w)
-
-	w.Header().Add("Content-type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	enc.Encode(s)
-}
-
-func (c *Monitor) ListScheduleFor(ctx context.Context, kind, network, taskID string, limit int) ([]structures.LatestRecord, error) {
-	l, err := c.pStore.GetRuns(ctx, kind, network, taskID, limit)
-	return l, err
-}
-*/

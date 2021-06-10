@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/persistence/params"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/monitor"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
@@ -32,13 +33,13 @@ type Client struct {
 	m         *monitor.Monitor
 }
 
-func NewClient(logger *zap.Logger, store *persistence.LastDataStorageTransport, dest TargetGetter) *Client {
+func NewClient(logger *zap.Logger, store *persistence.LastDataStorageTransport, ac auth.AuthCredentials, dest TargetGetter) *Client {
 	return &Client{
 		store:     store,
 		dest:      dest,
 		logger:    logger,
 		transport: make(map[string]LastDataTransporter),
-		m:         monitor.NewMonitor(store),
+		m:         monitor.NewMonitor(store, ac),
 	}
 }
 

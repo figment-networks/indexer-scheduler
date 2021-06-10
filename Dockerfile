@@ -13,7 +13,7 @@ RUN make prepare-ui-install-modules
 RUN make prepare-ui
 
 # ------------------------------------------------------------------------------
-# Node Builder Image
+# Go Builder Image
 # ------------------------------------------------------------------------------
 FROM golang AS build
 
@@ -34,8 +34,6 @@ COPY ./process ./process
 COPY ./runner ./runner
 COPY ./structures ./structures
 COPY ./ui/ui.go ./ui/ui.go
-
-
 
 COPY --from=build-ui  /build/ui /build/ui
 

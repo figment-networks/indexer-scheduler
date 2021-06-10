@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/structures"
 	"go.uber.org/zap"
 )
@@ -72,12 +73,14 @@ type Scheme struct {
 	targets    map[structures.NVCKey]*Targets
 	targetLock sync.RWMutex
 
+	creds  auth.AuthCredentials
 	logger *zap.Logger
 }
 
-func NewScheme(logger *zap.Logger) *Scheme {
+func NewScheme(logger *zap.Logger, creds auth.AuthCredentials) *Scheme {
 	return &Scheme{
 		logger:  logger,
+		creds:   creds,
 		targets: make(map[structures.NVCKey]*Targets),
 	}
 }
@@ -128,6 +131,10 @@ type schemeOutp struct {
 }
 
 func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) {
+	if err := auth.BasicAuth(s.creds, w, r); err != nil {
+		return
+	}
+
 	s.targetLock.RLock()
 	defer s.targetLock.RUnlock()
 

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/persistence"
 	"github.com/figment-networks/indexer-scheduler/persistence/params"
 	"github.com/figment-networks/indexer-scheduler/process"
@@ -42,9 +43,11 @@ type Core struct {
 
 	coreStore *persistence.CoreStorage
 	scheduler *process.Scheduler
+
+	creds auth.AuthCredentials
 }
 
-func NewCore(store *persistence.CoreStorage, scheduler *process.Scheduler, logger *zap.Logger) *Core {
+func NewCore(store *persistence.CoreStorage, scheduler *process.Scheduler, creds auth.AuthCredentials, logger *zap.Logger) *Core {
 	u, _ := uuid.NewRandom()
 	return &Core{
 		ID:        u,
@@ -54,6 +57,7 @@ func NewCore(store *persistence.CoreStorage, scheduler *process.Scheduler, logge
 
 		run:     map[uuid.UUID]structures.RunConfig{},
 		runners: map[string]MonitoredRunner{},
+		creds:   creds,
 	}
 }
 
@@ -218,6 +222,10 @@ func (c *Core) RegisterHandles(smux *http.ServeMux) {
 }
 
 func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
+	if err := auth.BasicAuth(c.creds, w, r); err != nil {
+		return
+	}
+
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
 
@@ -233,6 +241,10 @@ func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Core) handlerEnableSchedule(w http.ResponseWriter, r *http.Request) {
+	if err := auth.BasicAuth(c.creds, w, r); err != nil {
+		return
+	}
+
 	w.Header().Add("Content-type", "application/json")
 
 	enc := json.NewEncoder(w)
@@ -254,6 +266,10 @@ func (c *Core) handlerEnableSchedule(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Core) handlerDisableSchedule(w http.ResponseWriter, r *http.Request) {
+	if err := auth.BasicAuth(c.creds, w, r); err != nil {
+		return
+	}
+
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
 
@@ -284,6 +300,10 @@ type RunConfigAddRequest struct {
 }
 
 func (c *Core) handlerAddSchedule(w http.ResponseWriter, r *http.Request) {
+	if err := auth.BasicAuth(c.creds, w, r); err != nil {
+		return
+	}
+
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
 
