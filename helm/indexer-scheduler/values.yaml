@@ -25,21 +25,21 @@ global:
       secretsManagerKeyRef:
         key: prod/indexers/common
         property: rollbar_token
-# jobs:
-#   indexer-scheduler-migrations:
-#     annotations:
-#       helm.sh/hook: pre-install,pre-upgrade
-#     pod:
-#       containers:
-#         indexer-scheduler-migrations:
-#           command:
-#             - /app/scheduler/migration
-#           resources:
-#             requests:
-#               memory: 200Mi
-#               cpu: 500m
-#             limits:
-#               memory: 200Mi
+jobs:
+  indexer-scheduler-migrations:
+    annotations:
+      helm.sh/hook: pre-install,pre-upgrade
+    pod:
+      containers:
+        indexer-scheduler-migrations:
+          command:
+            - /app/migration
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi
 deployments:
   indexer-scheduler:
     service:
