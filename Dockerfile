@@ -55,4 +55,12 @@ COPY --from=build /build/migration /app/migration
 COPY ./cmd/scheduler-migration/migrations/ /app/migrations/
 COPY --from=build  /build/scheduler /app/scheduler
 
+
+RUN addgroup --gid 1234 figment
+RUN adduser --system --uid 1234 figment
+
+RUN chown -R figment:figment /app/scheduler
+
+USER 1234
+
 CMD ["/app/scheduler"]
