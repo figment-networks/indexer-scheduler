@@ -23,13 +23,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
       - name: Set ref vars
         id: refs
         run: |
           echo ${GITHUB_REF}
           echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
           echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
-          git fetch --all --tags
           echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
       - name: Check refs
         run: |
@@ -55,8 +57,6 @@ jobs:
           git tag --points-at HEAD
           echo git log
           git log
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
 
         #- name: Bump version and push tag
         #  id: tag-version
@@ -98,7 +98,7 @@ jobs:
           tags: |
             ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:${{github.sha}}
             ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:${{ steps.refs.outputs.SOURCE_TAG }}
-            ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:${{ steps.refs.outputs.SOURCE_BRANCH }}
+#            ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPOSITORY }}:${{ steps.refs.outputs.SOURCE_BRANCH }}
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
 
