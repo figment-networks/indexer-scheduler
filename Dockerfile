@@ -41,10 +41,7 @@ ENV CGO_ENABLED=0
 ENV GOARCH=amd64
 ENV GOOS=linux
 
-RUN \
-  GO_VERSION=$(go version | awk {'print $3'}) \
-  GIT_COMMIT=$(git rev-parse HEAD) \
-  make build && make build-migration
+RUN make build && make build-migration
 
 # ------------------------------------------------------------------------------
 # Target Image
