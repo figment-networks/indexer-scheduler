@@ -216,10 +216,10 @@ func main() {
 		logger.Info("[Scheduler] Loading destinations initial config from env var")
 
 		trgts := []structures.TargetConfig{}
-		dec := json.NewDecoder(strings.NewReader(cfg.DestinationsConfig))
+		dec := json.NewDecoder(strings.NewReader(cfg.DestinationsValue))
 		err = dec.Decode(&trgts)
 		if err != nil {
-			logger.Fatal("Error reading config from env (decode)", zap.Error(err), zap.String("cfg", cfg.DestinationsConfig))
+			logger.Fatal("Error reading config from env (decode)", zap.Error(err), zap.String("cfg", cfg.DestinationsValue))
 			return
 		}
 
