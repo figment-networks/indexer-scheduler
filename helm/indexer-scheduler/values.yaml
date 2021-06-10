@@ -74,6 +74,9 @@ deployments:
 ingresses:
   indexer-scheduler:
     annotations:
+      alb.ingress.kubernetes.io/healthcheck-path: /health
+      alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
+      alb.ingress.kubernetes.io/healthy-threshold-count: "5"
       alb.ingress.kubernetes.io/tags: environment=production
     service:
       name: indexer-scheduler
