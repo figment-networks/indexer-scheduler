@@ -16,6 +16,7 @@ import (
 
 type TargetAdder interface {
 	Add(t structures.Target)
+	Get(nv structures.NVCKey) (t structures.Target, ok bool)
 	Remove(t structures.Target)
 }
 
@@ -151,6 +152,19 @@ func (m *Manager) Load(ctx context.Context, t structures.Target, ct *tray.ConnTr
 							})
 						}
 						delete(m.nodes, k)
+					} else {
+						for _, ci := range n.ConnectionInfo {
+							if _, ok := m.ta.Get(structures.NVCKey{Network: network, Version: ci.Version, ChainID: n.ChainID}); !ok {
+								m.ta.Add(structures.Target{
+									Network:          network,
+									Version:          ci.Version,
+									ChainID:          n.ChainID,
+									Address:          t.Address,
+									ConnType:         t.ConnType,
+									AdditionalConfig: t.AdditionalConfig,
+								})
+							}
+						}
 					}
 				}
 

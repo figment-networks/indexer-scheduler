@@ -31,17 +31,18 @@ func (t *Targets) inc() int {
 	return t.next
 }
 
-func (trgs *Targets) Add(t structures.Target) {
+func (trgs *Targets) Add(t structures.Target) bool {
 	trgs.l.Lock()
 	defer trgs.l.Unlock()
 	for _, v := range trgs.T {
 		if v.Address == t.Address {
-			return
+			return false
 		}
 	}
 
 	trgs.T = append(trgs.T, t)
 	trgs.Len = len(trgs.T)
+	return true
 }
 
 func (trgs *Targets) Count() uint64 {
@@ -89,14 +90,15 @@ func (s *Scheme) Add(t structures.Target) {
 	s.targetLock.Lock()
 	defer s.targetLock.Unlock()
 
-	s.logger.Info("[Scheduler] Adding destination config", zap.String("connection_type", t.ConnType), zap.String("network", t.Network), zap.String("chain_id", t.ChainID))
-
 	i, ok := s.targets[structures.NVCKey{t.Network, t.Version, t.ChainID}]
 	if !ok {
 		i = &Targets{}
 	}
-	i.Add(t)
-	s.targets[structures.NVCKey{t.Network, t.Version, t.ChainID}] = i
+
+	if added := i.Add(t); added {
+		s.logger.Info("[Scheduler] Adding destination config", zap.String("connection_type", t.ConnType), zap.String("network", t.Network), zap.String("chain_id", t.ChainID))
+		s.targets[structures.NVCKey{t.Network, t.Version, t.ChainID}] = i
+	}
 }
 
 func (s *Scheme) Get(nv structures.NVCKey) (t structures.Target, ok bool) {
@@ -144,7 +146,7 @@ func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) 
 	so := schemeOutp{Destinations: make(map[string][]structures.Target)}
 
 	for k, v := range s.targets {
-		so.Destinations[k.String()] = v.T
+		so.Destinations[k.Network+":"+k.ChainID+":"+k.Version] = v.T
 	}
 	if err := enc.Encode(so); err != nil {
 		s.logger.Error("[Scheme] Error encoding data http ", zap.Error(err))
