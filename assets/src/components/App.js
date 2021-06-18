@@ -14,22 +14,14 @@ const App = () => (
     <Jumbotron>
         <h1>Scheduler UI</h1>
     </Jumbotron>
-    <Tabs defaultActiveKey="home" id="uncontrolled-tab-example">
-      <Tab eventKey="home" title="List">
-        <Row>
-          <Tasks />
-        </Row>
-        <Row>
-          <LastData />
-        </Row>
-      </Tab>
-      <Tab eventKey="newTask" title="New Task">
-        <Row>
-          <NewTask />
-        </Row>
-      </Tab>
-
-    </Tabs>
+   
+    <Row>
+        <Tasks />
+    </Row>
+    
+    <Row>
+        <LastData />
+    </Row>
 
 
 

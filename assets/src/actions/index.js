@@ -2,18 +2,20 @@ export const REQUEST_TASKS = 'REQUEST_TASKS'
 export const RECEIVE_TASKS = 'RECEIVE_TASKS'
 export const INVALIDATE_TASKS = 'INVALIDATE_TASKS'
 
-export const REQUEST_DISABLE_TASK = 'REQUEST_DISABLE_TASKS'
-export const RECEIVE_DISABLE_TASK = 'RECEIVE_DISABLE_TASKS'
+export const REQUEST_DISABLE_TASK = 'REQUEST_DISABLE_TASK'
+export const RECEIVE_DISABLE_TASK = 'RECEIVE_DISABLE_TASK'
 
-export const REQUEST_ENABLE_TASK = 'REQUEST_ENABLE_TASKS'
-export const RECEIVE_ENABLE_TASK = 'RECEIVE_ENABLE_TASKS'
+export const REQUEST_ENABLE_TASK = 'REQUEST_ENABLE_TASK'
+export const RECEIVE_ENABLE_TASK = 'RECEIVE_ENABLE_TASK'
 
 
-export const REQUEST_ADD_TASK = 'REQUEST_ADD_TASKS'
-export const RECEIVE_ADD_TASK = 'RECEIVE_ADD_TASKS'
+export const REQUEST_ADD_TASK = 'REQUEST_ADD_TASK'
+export const RECEIVE_ADD_TASK = 'RECEIVE_ADD_TASK'
 
 export const UI_SHOW_ADDITIONAL_FIELDS = 'UI_SHOW_ADDITIONAL_FIELDS'
 
+export const UI_HIDE_NEW_TASK = 'UI_HIDE_NEW_TASK'
+export const UI_SHOW_NEW_TASK = 'UI_SHOW_NEW_TASK'
 
 
 var initial = true
@@ -119,8 +121,15 @@ export const addTask = (addTaskParam) => dispatch => {
     .then(json => dispatch(receiveAddTask(json)))
 }
 
-
 export const changeAdditionalFields = (kind) => ({
   type: UI_SHOW_ADDITIONAL_FIELDS,
   kind
+})
+
+export const hideNewTask = () => ({
+  type: UI_HIDE_NEW_TASK
+})
+
+export const showNewTask = () => ({
+  type: UI_SHOW_NEW_TASK
 })

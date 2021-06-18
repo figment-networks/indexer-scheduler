@@ -16,7 +16,6 @@ import { changeAdditionalFields } from '../actions/index'
 class NewTask extends Component {
   static propTypes = {
     isAdding: PropTypes.bool.isRequired,
-    isSyncrange: PropTypes.bool.isRequired,
     dispatch: PropTypes.func.isRequired,
     addTaskTypePicked: PropTypes.string.isRequired
   }
@@ -51,7 +50,7 @@ class NewTask extends Component {
   render() {
     return (
       <Container>
-        <Row >
+        <Row style={{padding: 20}}>
         <Form onSubmit={(e) => this.handleSubmit(e)}>
           <Form.Group controlId="newTaskTaskID">
             <Form.Label>TaskID</Form.Label>
@@ -59,15 +58,6 @@ class NewTask extends Component {
             <Form.Text className="text-muted">
               Unique taskID. This value has to be unique if you wanna run few tasks simultaneously.
             </Form.Text>
-          </Form.Group>
-
-
-          <Form.Group controlId="newTaskKind">
-            <Form.Label>Type (runner)</Form.Label>
-            <Form.Control as="select" onChange={(e) =>  this.taskKindChange(e)} ref={node => (this.kindVal = node)}  >
-              <option>lastdata</option>
-              <option>syncrange</option>
-            </Form.Control>
           </Form.Group>
 
           <Form.Group controlId="newTaskNetwork">
@@ -93,8 +83,17 @@ class NewTask extends Component {
               Interval of the least time between runs. Usual go parsing is applied, so 10s, 2m, 4w
             </Form.Text>
           </Form.Group>
+
+          <Form.Group controlId="newTaskKind">
+            <Form.Label>Type (runner)</Form.Label>
+            <Form.Control as="select" onChange={(e) =>  this.taskKindChange(e)} ref={node => (this.kindVal = node)}  >
+              <option>lastdata</option>
+              <option>syncrange</option>
+            </Form.Control>
+          </Form.Group>
+
           {this.props.addTaskTypePicked == "syncrange"
-            ? <Container>
+            ? <Container style={{padding: 0}}>
               <h3>Sync Range params:</h3>
               <hr />
               <Form.Group controlId="newTaskHeightFrom">
@@ -114,7 +113,7 @@ class NewTask extends Component {
               </Container>
           : ""}
 
-          <Button variant="primary" type="submit">
+          <Button variant="primary" type="submit" block>
             Submit
           </Button>
         </Form>
