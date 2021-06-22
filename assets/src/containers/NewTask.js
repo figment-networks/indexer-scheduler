@@ -7,11 +7,7 @@ import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
 import Form from 'react-bootstrap/Form'
 
-
-import { addTask } from '../actions/index'
-
-import { changeAdditionalFields } from '../actions/index'
-
+import { addTask, changeAdditionalFields, hideNewTask } from '../actions/index'
 
 class NewTask extends Component {
   static propTypes = {
@@ -45,6 +41,7 @@ class NewTask extends Component {
     }
 
     dispatch(addTask(addTaskPayload))
+    dispatch(hideNewTask())
    }
 
   render() {

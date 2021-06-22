@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-//go:embed assets
+// go:embed assets
 var embededFiles embed.FS
 
 type UI struct {
@@ -24,5 +24,6 @@ func (ui *UI) RegisterHandles(mux *http.ServeMux) error {
 	}
 
 	mux.Handle("/ui/", http.StripPrefix("/ui/", http.FileServer(http.FS(fsys))))
+
 	return nil
 }

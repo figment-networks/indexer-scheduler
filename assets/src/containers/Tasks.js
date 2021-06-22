@@ -80,12 +80,12 @@ class Tasks extends Component {
             <NewTask/> 
           </Row>
         : 
-          <div>
-            <Row >
-              <Col><h2>Task list</h2></Col>
-              <Col xs={1}><Button style={{padding: 10}} variant="outline-dark" onClick={this.handleRefreshClick}>Refresh</Button></Col>
-              <Col xs={2}><Button style={{padding: 10}} variant="success" onClick={this.handleNewTaskClick}>New task</Button></Col>
-            </Row>
+          <div> 
+            <div className="row" >
+              <div className="col"><h2>Task list</h2></div>
+              <div className="col" style={{textAlign: "right", maxWidth: "120px"}}><Button style={{padding: 10}} variant="outline-dark" onClick={this.handleRefreshClick}>Refresh</Button></div>
+              <div className="col" style={{textAlign: "right", maxWidth: "120px"}}><Button style={{padding: 10}} variant="success" onClick={this.handleNewTaskClick}>New task</Button></div>
+            </div>
             <Row>
             {isEmpty
               ? (isFetching ? <h2>Loading...</h2> : "")

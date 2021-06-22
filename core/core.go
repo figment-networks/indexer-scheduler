@@ -220,6 +220,7 @@ func (c *Core) RegisterHandles(smux *http.ServeMux) {
 func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	schedule, err := c.ListSchedule(r.Context())
 	if err != nil {
@@ -234,6 +235,7 @@ func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
 
 func (c *Core) handlerEnableSchedule(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-type", "application/json")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	enc := json.NewEncoder(w)
 	sIDs := strings.Replace(r.URL.Path, "/scheduler/core/enable/", "", -1)
@@ -256,6 +258,7 @@ func (c *Core) handlerEnableSchedule(w http.ResponseWriter, r *http.Request) {
 func (c *Core) handlerDisableSchedule(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	sIDs := strings.Replace(r.URL.Path, "/scheduler/core/disable/", "", -1)
 	sID, err := uuid.Parse(sIDs)
@@ -286,6 +289,7 @@ type RunConfigAddRequest struct {
 func (c *Core) handlerAddSchedule(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	rcar := RunConfigAddRequest{}
 

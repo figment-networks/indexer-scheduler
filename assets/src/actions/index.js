@@ -37,7 +37,7 @@ export const receiveTasks = (json) => ({
 
 const fetchTasks = () => dispatch => {
   dispatch(requestTasks())
-  return fetch(`/scheduler/core/list`)
+  return fetch(`http://0.0.0.0:8889/scheduler/core/list`, {mode: "cors"})
     .then(response => response.json())
     .then(json => dispatch(receiveTasks(json)))
 }
@@ -84,14 +84,16 @@ export const receiveEnableTask = (json) => ({
 
 export const enableTask = (task_id) => dispatch => {
   dispatch(requestEnableTask(task_id))
-  return fetch(`/scheduler/core/enable/`+ task_id, {method: 'GET'})
+  return fetch(`http://0.0.0.0:8889/scheduler/core/enable/`+ task_id, {method: 'GET',
+  mode: "cors"})
     .then(response => response.json())
     .then(json => dispatch(receiveEnableTask(json)))
 }
 
 export const disableTask = (task_id) => dispatch => {
   dispatch(requestDisableTask(task_id))
-  return fetch(`/scheduler/core/disable/`+ task_id, {method: 'GET'})
+  return fetch(`http://0.0.0.0:8889/scheduler/core/disable/`+ task_id, {method: 'GET',
+  mode: "cors"})
     .then(response => response.json())
     .then(json => dispatch(receiveDisableTask(json)))
 }
@@ -109,13 +111,15 @@ export const receiveAddTask = (json) => ({
 })
 
 export const addTask = (addTaskParam) => dispatch => {
+  console.log("add task")
   dispatch(requestAddTask())
-  return fetch(`/scheduler/core/addTask/`, {
+  return fetch(`http://0.0.0.0:8889/scheduler/core/addTask/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(addTaskParam)
+    body: JSON.stringify(addTaskParam),
+    mode: "cors"
   })
     .then(response => response.json())
     .then(json => dispatch(receiveAddTask(json)))

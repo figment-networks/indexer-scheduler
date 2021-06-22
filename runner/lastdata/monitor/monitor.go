@@ -32,6 +32,7 @@ type ListRunningRequestPayload struct {
 func (m *Monitor) handlerListRunning(w http.ResponseWriter, r *http.Request) {
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	dec := json.NewDecoder(r.Body)
 	lrrp := ListRunningRequestPayload{}
