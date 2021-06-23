@@ -1,4 +1,6 @@
-# This should be run with `source env`
+#!/bin/sh
+
+# This file is for development only and should be used by running `source ./config/development/env` from the project root
 export DATABASE_URL=postgres://scheduler:scheduler@localhost:5431/scheduler?sslmode=disable
 export AUTH_USER=dev
 export AUTH_PASSWORD=dev
