@@ -23,7 +23,7 @@ docker-compose up schedulermigrate
 
 > Important! You will need `nodejs` and `npm` installed in order to build the UI. If you don't have this installed, check out https://github.com/asdf-vm/asdf-nodejs.
 
-```
+```sh
 make prepare-ui-install-modules
 make prepare-ui
 ```
@@ -37,6 +37,6 @@ go run cmd/scheduler/main.go cmd/scheduler/dynamic.go cmd/scheduler/profiling.go
 
 ## View the UI
 
-```
+```sh
 open http://127.0.0.1:8075/ui/
 ```
