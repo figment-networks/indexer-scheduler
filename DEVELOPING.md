@@ -21,6 +21,8 @@ docker-compose up schedulermigrate
 
 ## Build the front end
 
+> Important! You will need `nodejs` and `npm` installed in order to build the UI. If you don't have this installed, check out https://github.com/asdf-vm/asdf-nodejs.
+
 ```
 make prepare-ui-install-modules
 make prepare-ui
