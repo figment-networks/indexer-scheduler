@@ -1,3 +1,4 @@
+# This should be run with `source env`
 export DATABASE_URL=postgres://scheduler:scheduler@localhost:5431/scheduler?sslmode=disable
 export AUTH_USER=dev
 export AUTH_PASSWORD=dev

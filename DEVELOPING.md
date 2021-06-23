@@ -29,11 +29,11 @@ make prepare-ui
 ## Run the scheduler
 
 ```sh
-source ./config/development/env
+source config/development/env
 go run cmd/scheduler/main.go cmd/scheduler/dynamic.go cmd/scheduler/profiling.go
 ```
 
-## View UI
+## View the UI
 
 ```
 open http://127.0.0.1:8075/ui/
