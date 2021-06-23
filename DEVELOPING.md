@@ -13,7 +13,7 @@ cd indexer-scheduler/
 docker-compose up -d postgresdatabase
 ```
 
-Run database migrations:
+Run database migrations. This is run separately to allow time for postgres to boot and be ready for migrations.
 
 ```sh
 docker-compose up schedulermigrate
