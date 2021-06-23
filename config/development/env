@@ -1,0 +1,7 @@
+export DATABASE_URL=postgres://scheduler:scheduler@localhost:5431/scheduler?sslmode=disable
+export AUTH_USER=dev
+export AUTH_PASSWORD=dev
+export HEALTH_CHECK_INTERVAL=10s
+export DESTINATIONS_CONFIG=./config/development/destinations
+export SCHEDULES_CONFIG=./config/development/schedules
+export ADDRESS=127.0.0.1:8075

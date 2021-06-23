@@ -1,0 +1,7 @@
+[{
+    "network": "cosmos",
+    "chain_id": "cosmos-4",
+    "interval": "1s",
+    "kind": "lastdata",
+    "task_id": "cosmos-4-lastdata"
+}]
