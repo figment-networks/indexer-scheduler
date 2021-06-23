@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/structures"
 	"go.uber.org/zap"
 )
@@ -30,17 +31,18 @@ func (t *Targets) inc() int {
 	return t.next
 }
 
-func (trgs *Targets) Add(t structures.Target) {
+func (trgs *Targets) Add(t structures.Target) bool {
 	trgs.l.Lock()
 	defer trgs.l.Unlock()
 	for _, v := range trgs.T {
 		if v.Address == t.Address {
-			return
+			return false
 		}
 	}
 
 	trgs.T = append(trgs.T, t)
 	trgs.Len = len(trgs.T)
+	return true
 }
 
 func (trgs *Targets) Count() uint64 {
@@ -72,12 +74,14 @@ type Scheme struct {
 	targets    map[structures.NVCKey]*Targets
 	targetLock sync.RWMutex
 
+	creds  auth.AuthCredentials
 	logger *zap.Logger
 }
 
-func NewScheme(logger *zap.Logger) *Scheme {
+func NewScheme(logger *zap.Logger, creds auth.AuthCredentials) *Scheme {
 	return &Scheme{
 		logger:  logger,
+		creds:   creds,
 		targets: make(map[structures.NVCKey]*Targets),
 	}
 }
@@ -86,14 +90,15 @@ func (s *Scheme) Add(t structures.Target) {
 	s.targetLock.Lock()
 	defer s.targetLock.Unlock()
 
-	s.logger.Info("[Scheduler] Adding destination config", zap.String("connection_type", t.ConnType), zap.String("network", t.Network), zap.String("chain_id", t.ChainID))
-
 	i, ok := s.targets[structures.NVCKey{t.Network, t.Version, t.ChainID}]
 	if !ok {
 		i = &Targets{}
 	}
-	i.Add(t)
-	s.targets[structures.NVCKey{t.Network, t.Version, t.ChainID}] = i
+
+	if added := i.Add(t); added {
+		s.logger.Info("[Scheduler] Adding destination config", zap.String("connection_type", t.ConnType), zap.String("network", t.Network), zap.String("chain_id", t.ChainID))
+		s.targets[structures.NVCKey{t.Network, t.Version, t.ChainID}] = i
+	}
 }
 
 func (s *Scheme) Get(nv structures.NVCKey) (t structures.Target, ok bool) {
@@ -128,6 +133,10 @@ type schemeOutp struct {
 }
 
 func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) {
+	if err := auth.BasicAuth(s.creds, w, r); err != nil {
+		return
+	}
+
 	s.targetLock.RLock()
 	defer s.targetLock.RUnlock()
 
@@ -137,7 +146,7 @@ func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) 
 	so := schemeOutp{Destinations: make(map[string][]structures.Target)}
 
 	for k, v := range s.targets {
-		so.Destinations[k.String()] = v.T
+		so.Destinations[k.Network+":"+k.ChainID+":"+k.Version] = v.T
 	}
 	if err := enc.Encode(so); err != nil {
 		s.logger.Error("[Scheme] Error encoding data http ", zap.Error(err))

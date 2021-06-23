@@ -8,7 +8,6 @@ networks:
 
 volumes:
   postgresdatabase: {}
-  schedule: {}
 
 services:
   postgresdatabase:
@@ -24,10 +23,11 @@ services:
     volumes:
       - postgresdatabase:/var/lib/postgresql/data/
 
-  schedulerrmigrate:
+  schedulermigrate:
+    command: /app/migration
     build:
       context: .
-      dockerfile: ./Dockerfile.scheduler.migration
+      dockerfile: ./Dockerfile
     networks:
       - internal
     environment:

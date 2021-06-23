@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"syscall"
 	"time"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/conn/tray"
 	"github.com/figment-networks/indexer-scheduler/core"
 	"github.com/figment-networks/indexer-scheduler/destination"
+	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/persistence"
 	"github.com/figment-networks/indexer-scheduler/persistence/postgresstore"
 	"github.com/figment-networks/indexer-scheduler/process"
@@ -140,9 +142,14 @@ func main() {
 
 	cStore := &persistence.CoreStorage{Driver: d}
 
-	c := core.NewCore(cStore, sch, logger)
+	creds := auth.AuthCredentials{
+		User:     cfg.AuthUser,
+		Password: cfg.AuthPassword,
+	}
+
+	c := core.NewCore(cStore, sch, creds, logger)
 	c.RegisterHandles(mux)
-	scheme := destination.NewScheme(logger)
+	scheme := destination.NewScheme(logger, creds)
 	scheme.RegisterHandles(mux)
 
 	connTray := tray.NewConnTray(logger)
@@ -205,8 +212,27 @@ func main() {
 		}
 	}
 
-	if cfg.DestinationsConfig != "" {
-		logger.Info("[Scheduler] Loading destinations initial config")
+	if cfg.DestinationsValue != "" {
+		logger.Info("[Scheduler] Loading destinations initial config from env var")
+
+		trgts := []structures.TargetConfig{}
+		dec := json.NewDecoder(strings.NewReader(cfg.DestinationsValue))
+		err = dec.Decode(&trgts)
+		if err != nil {
+			logger.Fatal("Error reading config from env (decode)", zap.Error(err), zap.String("cfg", cfg.DestinationsValue))
+			return
+		}
+
+		for _, trgt := range trgts {
+			err := cont.Add(ctx, trgt, connTray, scheme)
+			if err != nil {
+				logger.Error("Error adding destination", zap.Error(err))
+				return
+			}
+		}
+
+	} else if cfg.DestinationsConfig != "" {
+		logger.Info("[Scheduler] Loading destinations initial config from path")
 
 		files, err := ioutil.ReadDir(cfg.DestinationsConfig)
 		if err != nil {
@@ -235,7 +261,11 @@ func main() {
 			}
 
 			for _, trgt := range trgts {
-				cont.Add(ctx, trgt, connTray, scheme)
+				err := cont.Add(ctx, trgt, connTray, scheme)
+				if err != nil {
+					logger.Error("Error adding destination", zap.Error(err))
+					return
+				}
 			}
 		}
 	}
@@ -247,7 +277,7 @@ func main() {
 
 	pStore := runnerPersistence.NewLastDataStorageTransport(runnerDatabase.NewDriver(db))
 
-	lh := lastdata.NewClient(logger, pStore, scheme)
+	lh := lastdata.NewClient(logger, pStore, creds, scheme)
 	rHTTP := runnerHTTP.NewLastDataHTTPTransport(logger)
 	lh.AddTransport(runnerHTTP.ConnectionTypeHTTP, rHTTP)
 	rWS := runnerWS.NewLastDataWSTransport(logger, connTray)
@@ -255,7 +285,7 @@ func main() {
 	lh.RegisterHandles(mux)
 
 	pSRStore := runnerSyncrangePersistence.NewLastDataStorageTransport(runnerSyncrangeDatabase.NewDriver(db))
-	sr := syncrange.NewClient(logger, pSRStore, scheme)
+	sr := syncrange.NewClient(logger, pSRStore, creds, scheme)
 	rsSRHTTP := runnerSyncrangeHTTP.NewSyncrangeHTTPTransport(logger)
 	sr.AddTransport(runnerSyncrangeHTTP.ConnectionTypeHTTP, rsSRHTTP)
 

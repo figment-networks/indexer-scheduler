@@ -16,6 +16,7 @@ import (
 
 type TargetAdder interface {
 	Add(t structures.Target)
+	Get(nv structures.NVCKey) (t structures.Target, ok bool)
 	Remove(t structures.Target)
 }
 
@@ -151,6 +152,19 @@ func (m *Manager) Load(ctx context.Context, t structures.Target, ct *tray.ConnTr
 							})
 						}
 						delete(m.nodes, k)
+					} else {
+						for _, ci := range n.ConnectionInfo {
+							if _, ok := m.ta.Get(structures.NVCKey{Network: network, Version: ci.Version, ChainID: n.ChainID}); !ok {
+								m.ta.Add(structures.Target{
+									Network:          network,
+									Version:          ci.Version,
+									ChainID:          n.ChainID,
+									Address:          t.Address,
+									ConnType:         t.ConnType,
+									AdditionalConfig: t.AdditionalConfig,
+								})
+							}
+						}
 					}
 				}
 
@@ -158,41 +172,3 @@ func (m *Manager) Load(ctx context.Context, t structures.Target, ct *tray.ConnTr
 		}
 	}
 }
-
-/*
-type schemeOutp struct {
-	Destinations map[string][]destination.Target `json:"destinations"`
-	Managers     map[string]map[string]bool      `json:"managers"`
-}
-
-func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) {
-	s.destinationLock.RLock()
-	defer s.destinationLock.RUnlock()
-
-	enc := json.NewEncoder(w)
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	so := schemeOutp{
-		Destinations: make(map[string][]destination.Target),
-		Managers:     make(map[string]map[string]bool),
-	}
-
-	for k, v := range s.destinations {
-		so.Destinations[k.String()] = v
-	}
-	for k, v := range s.managers {
-		m := map[string]bool{}
-		for nv, val := range v {
-			m[nv.String()] = val
-		}
-		so.Managers[k] = m
-	}
-	if err := enc.Encode(so); err != nil {
-		s.logger.Error("[Scheme] Error encoding data http ", zap.Error(err))
-	}
-}
-
-func (s *Scheme) RegisterHandles(smux *http.ServeMux) {
-	smux.HandleFunc("/scheduler/destination/list", s.handlerListDestination)
-}
-*/

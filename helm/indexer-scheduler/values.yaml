@@ -1,0 +1,90 @@
+global:
+  labels:
+    team: indexers
+    severity: critical
+  annotations:
+    figment.io/github_repository: github.com/figment-networks/indexer-scheduler
+    ad.datadoghq.com/indexer-scheduler.check_names: '["openmetrics"]'
+    ad.datadoghq.com/indexer-scheduler.init_configs: '[{}]'
+    ad.datadoghq.com/indexer-scheduler.instances: '[{
+        "prometheus_url": "http://%%host%%:8075/metrics",
+        "namespace": "indexer_scheduler",
+        "metrics": ["*"],
+        "send_distribution_buckets": true,
+        "tags": ["group:indexer-scheduler", "cluster:k8s"]
+      }]'
+  env:
+    DATABASE_URL:
+      secretsManagerKeyRef:
+        key: production/indexers/scheduler
+        property: db_dsn
+    AUTH_USER:
+      secretsManagerKeyRef:
+        key: production/indexers/scheduler
+        property: auth_user
+    AUTH_PASSWORD:
+      secretsManagerKeyRef:
+        key: production/indexers/scheduler
+        property: auth_password
+    HEALTH_CHECK_INTERVAL: "10s"
+    DESTINATIONS_VALUE: "[{\"type\": \"manager\",\"version\": \"0.0.1\",\"conn_type\": \"ws\", \"address\": \"indexer-manager.indexers.svc.cluster.local:8085\",\"additional\": {\"lastdata\": {\"endpoint\": \"/scrape_latest\"},\"syncrange\": {\"endpoint\": \"/scrape_latest\"}}}]"
+jobs:
+  indexer-scheduler-migrations:
+    annotations:
+      helm.sh/hook: pre-install,pre-upgrade
+    pod:
+      containers:
+        indexer-scheduler-migrations:
+          command:
+            - /app/migration
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi
+deployments:
+  indexer-scheduler:
+    service:
+      ports:
+        http:
+          port: 8075
+          targetPort: 8075
+          protocol: TCP
+    replicas: 1
+    pod:
+      containers:
+        indexer-scheduler:
+          command:
+            - /app/scheduler
+          env:
+            ADDRESS: 0.0.0.0:8075
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 8075
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 8075
+          resources:
+            requests:
+              memory: 200Mi
+              cpu: 500m
+            limits:
+              memory: 200Mi
+
+ingresses:
+  indexer-scheduler:
+    annotations:
+      alb.ingress.kubernetes.io/healthcheck-path: /health
+      alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
+      alb.ingress.kubernetes.io/healthy-threshold-count: "5"
+      alb.ingress.kubernetes.io/tags: environment=production
+    service:
+      name: indexer-scheduler
+      port: 8075
+    hosts:
+      - host: "ischedule.figment.io"
+        paths:
+          - path: /*
