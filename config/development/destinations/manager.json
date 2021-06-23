@@ -6,6 +6,9 @@
     "additional": {
         "lastdata": {
             "endpoint": "/scrape_latest"
+        },
+        "syncrange": {
+            "endpoint": "/scrape_latest"
         }
     }
 }]
