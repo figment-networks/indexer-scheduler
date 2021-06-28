@@ -1,7 +1,7 @@
 [{
     "network": "cosmos",
-    "chain_id": "cosmos-4",
+    "chain_id": "cosmoshub-4",
     "interval": "1s",
     "kind": "lastdata",
-    "task_id": "cosmos-4-lastdata"
+    "task_id": "cosmoshub-4-lastdata"
 }]
