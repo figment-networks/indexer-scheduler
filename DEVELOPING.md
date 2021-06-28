@@ -31,7 +31,12 @@ make prepare-ui
 ## Run the scheduler
 
 ```sh
-source config/development/env
+DATABASE_URL=postgres://scheduler:scheduler@localhost:5431/scheduler?sslmode=disable \
+AUTH_USER=dev \
+AUTH_PASSWORD=dev \
+DESTINATIONS_CONFIG=./config/development/destinations \
+SCHEDULES_CONFIG=./config/development/schedules \
+ADDRESS=127.0.0.1:8075 \
 go run cmd/scheduler/main.go cmd/scheduler/dynamic.go cmd/scheduler/profiling.go
 ```
 
