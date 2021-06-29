@@ -1,0 +1,7 @@
+[{
+    "network": "kava",
+    "chain_id": "kava-7",
+    "interval": "1s",
+    "kind": "lastdata",
+    "task_id": "kava-7-lastdata"
+}]

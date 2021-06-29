@@ -44,6 +44,65 @@ Destinations config refers to destination that scraper should respect
 }]
 ```
 
+## Local Development
+
+### Get the code
+
+```sh
+git clone git@github.com:figment-networks/indexer-scheduler.git
+cd indexer-scheduler/
+```
+
+### Dependencies
+
+1. nodejs & npm (if you don't have it installed, see https://github.com/asdf-vm/asdf-nodejs)
+2. [Go](https://golang.org/doc/install)
+3. [Docker](https://www.docker.com/products/docker-desktop)
+
+### Start services
+
+```sh
+docker-compose up -d postgresdatabase
+```
+
+Run database migrations. This is run separately to allow time for postgres to boot and be ready for migrations.
+
+```sh
+docker-compose up schedulermigrate
+```
+
+### Build the front end
+
+> Important! You will need `nodejs` and `npm` installed in order to build the UI.
+
+```sh
+make prepare-ui-install-modules
+make prepare-ui
+```
+
+### Run the scheduler
+
+> There are pre-defined config files in `./config/development` with default values. However, these may not be suitable for your needs. Refer to the [Configuration](#configuration) section above.
+
+```sh
+DATABASE_URL=postgres://scheduler:scheduler@localhost:5431/scheduler?sslmode=disable \
+AUTH_USER=dev \
+AUTH_PASSWORD=dev \
+DESTINATIONS_CONFIG=./config/development/destinations \
+SCHEDULES_CONFIG=./config/development/schedules \
+ADDRESS=127.0.0.1:8075 \
+go run cmd/scheduler/main.go cmd/scheduler/dynamic.go cmd/scheduler/profiling.go
+```
+
+### Open the UI
+
+```sh
+open http://127.0.0.1:8075/ui/
+```
+
+Scheduled tasks loaded via config are disabled by default. You will need to enable the tasks through the UI to start them.
+
+
 ## Runners
 ### Last Data
 Last data scenario/runner is sending next requests to given destination in given intervals.
