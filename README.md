@@ -91,7 +91,7 @@ AUTH_PASSWORD=dev \
 DESTINATIONS_CONFIG=./config/development/destinations \
 SCHEDULES_CONFIG=./config/development/schedules \
 ADDRESS=127.0.0.1:8075 \
-go run cmd/scheduler/main.go cmd/scheduler/dynamic.go cmd/scheduler/profiling.go
+go run ./cmd/scheduler
 ```
 
 ### Open the UI
@@ -101,6 +101,11 @@ open http://127.0.0.1:8075/ui/
 ```
 
 Scheduled tasks loaded via config are disabled by default. You will need to enable the tasks through the UI to start them.
+
+### Debug with VSCode
+
+The `.vscode` directory contains a launch config to debug scheduler.
+
 
 
 ## Runners
