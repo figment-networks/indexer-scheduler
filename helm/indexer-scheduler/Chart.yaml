@@ -1,0 +1,10 @@
+apiVersion: v2
+name: indexer-scheduler
+description: Indexer scheduler service
+type: application
+version: 0.0.1
+dependencies:
+  - name: common
+    repository: https://raw.githubusercontent.com/figment-networks/helm/main/_repo
+    version: "0.1.0"
+

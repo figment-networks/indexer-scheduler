@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/persistence/params"
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange/monitor"
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange/persistence"
@@ -70,13 +71,13 @@ type Client struct {
 	m      *monitor.Monitor
 }
 
-func NewClient(logger *zap.Logger, store *persistence.SyncRangeStorageTransport, dest TargetGetter) *Client {
+func NewClient(logger *zap.Logger, store *persistence.SyncRangeStorageTransport, creds auth.AuthCredentials, dest TargetGetter) *Client {
 	return &Client{
 		store:     store,
 		dest:      dest,
 		transport: make(map[string]SyncRangeTransporter),
 		logger:    logger,
-		m:         monitor.NewMonitor(store),
+		m:         monitor.NewMonitor(store, creds),
 	}
 }
 

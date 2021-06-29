@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/bearcherian/rollzap v1.0.2
-	github.com/figment-networks/indexing-engine v0.2.1
+	github.com/figment-networks/indexing-engine v0.3.2-0.20210603103553-9df604641a66
 	github.com/golang-migrate/migrate/v4 v4.13.0
 	github.com/golang/protobuf v1.4.3 // indirect
 	github.com/google/uuid v1.2.0

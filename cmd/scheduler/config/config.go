@@ -33,6 +33,10 @@ type Config struct {
 
 	SchedulesConfig    string `json:"schedules_config" envconfig:"SCHEDULES_CONFIG"`
 	DestinationsConfig string `json:"destinations_config" envconfig:"DESTINATIONS_CONFIG"`
+	DestinationsValue  string `json:"destinations_value" envconfig:"DESTINATIONS_VALUE"`
+
+	AuthUser     string `json:"auth_user" envconfig:"AUTH_USER"`
+	AuthPassword string `json:"auth_password" envconfig:"AUTH_PASSWORD"`
 
 	HealthCheckInterval time.Duration `json:"health_check_interval" envconfig:"HEALTH_CHECK_INTERVAL" default:"10s"`
 }
