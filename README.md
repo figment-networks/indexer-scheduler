@@ -94,6 +94,31 @@ ADDRESS=127.0.0.1:8075 \
 go run ./cmd/scheduler
 ```
 
+If everything goes well, you should see the following logs:
+
+```log
+{"level":"info","time":"2021-06-29T17:22:24.495-0400","msg":"indexer-scheduler  (git: ) - built at "}
+{"level":"info","time":"2021-06-29T17:22:24.496-0400","msg":"[DB] Connecting to database..."}
+{"level":"info","time":"2021-06-29T17:22:24.511-0400","msg":"[DB] Ping successfull..."}
+{"level":"info","time":"2021-06-29T17:22:24.511-0400","msg":"[Scheduler] Adding scheduler..."}
+{"level":"error","time":"2021-06-29T17:22:24.517-0400","msg":"[Scheduler] Error during initial load of scheduler","error":"no rows updated"}
+{"level":"info","time":"2021-06-29T17:22:24.517-0400","msg":"[Scheduler] Loading schedule initial config"}
+{"level":"info","time":"2021-06-29T17:22:24.518-0400","msg":"[Scheduler] Adding schedule config","kind":"lastdata","network":"cosmos","chain":"cosmoshub-4","task_id":"cosmoshub-4-lastdata"}
+{"level":"info","time":"2021-06-29T17:22:24.524-0400","msg":"[Scheduler] Adding schedule config","kind":"lastdata","network":"kava","chain":"kava-7","task_id":"kava-7-lastdata"}
+{"level":"info","time":"2021-06-29T17:22:24.527-0400","msg":"[Scheduler] Loading destinations initial config from path"}
+{"level":"info","time":"2021-06-29T17:22:24.528-0400","msg":"[Scheduler] Running Load"}
+{"level":"info","time":"2021-06-29T17:22:24.528-0400","msg":"[API] Connecting to websocket ","host":"ws://127.0.0.1:8085/ws"}
+{"level":"info","time":"2021-06-29T17:22:24.528-0400","msg":"[HTTP] Listening on 127.0.0.1:8075"}
+```
+
+By default, scheduler will try to start a websocket connection with a [manager](https://github.com/figment-networks/indexer-manager) running on port `0.0.0.0:8085`. If there is no manager running, it will retry until it succeeds.
+
+Whenever you spin up a new worker that has registered with a manager (e.g [kava-worker](https://github.com/figment-networks/kava-worker)), scheduler will internally track the new target and the target will now be eligible to receive tasks. If multiple targets exist for the same network and chain, then scheduler will distribute tasks between all applicable targets (round-robin).
+
+```log
+{"level":"info","time":"2021-06-29T17:18:14.985-0400","msg":"[Scheduler] Adding destination config","connection_type":"ws","network":"kava","chain_id":"kava-7"}
+```
+
 ### Open the UI
 
 ```sh
