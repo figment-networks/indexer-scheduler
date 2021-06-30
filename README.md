@@ -129,7 +129,7 @@ Scheduled tasks loaded via config are disabled by default. You will need to enab
 
 ### Debug with VSCode
 
-The `.vscode` directory contains a launch config to debug scheduler.
+The `.vscode` directory contains a launch config to debug scheduler. To start debugging, open the Debug panel (⇧⌘D) and click the green arrow.
 
 
 
