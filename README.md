@@ -123,7 +123,7 @@ To have the scheduler start coordinating data retrieval with the manager, you ne
 1. Open the UI at [http://127.0.0.1:8075/ui/](http://127.0.0.1:8075/ui/)
 2. Click New Task
 3. Enter the task details. For example, if you are running a [kava-worker](https://github.com/figment-networks/kava-worker) for the kava-7 chain, use the following values:
-  TaskId: "kava-7-lastdata"
+  TaskId: kava-7-lastdata
   Type: lastdata
   Network: kava
   ChainID: kava-7
