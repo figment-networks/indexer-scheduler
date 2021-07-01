@@ -1,7 +1,0 @@
-[{
-    "network": "cosmos",
-    "chain_id": "cosmoshub-4",
-    "interval": "1s",
-    "kind": "lastdata",
-    "task_id": "cosmoshub-4-lastdata"
-}]

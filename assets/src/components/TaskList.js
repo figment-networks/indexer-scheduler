@@ -42,11 +42,11 @@ class TaskList extends React.Component {
         <td>{task.status} </td>
         <td>
           {task.enabled
-            ? <Button onClick={(e) => this.clickDisableTask(task.id, e)} >enabled</Button>
-            : <Button onClick={(e) => this.clickEnableTask(task.id, e)} >disabled</Button>
+            ? <Button onClick={(e) => this.clickDisableTask(task.id, e)} >Disable Task</Button>
+            : <Button onClick={(e) => this.clickEnableTask(task.id, e)} >Enable Task</Button>
           } </td>
         <td>{JSON.stringify(task.config)}</td>
-        <td ><Button onClick={(e) => this.clickLoadTaskInformation(task.task_id, task.network, task.chain_id, task.kind, e)}  >See </Button> </td>
+        <td ><Button onClick={(e) => this.clickLoadTaskInformation(task.task_id, task.network, task.chain_id, task.kind, e)}  >See Logs</Button> </td>
       </tr>
     )}
   </Table>

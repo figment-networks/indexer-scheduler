@@ -89,7 +89,6 @@ DATABASE_URL=postgres://scheduler:scheduler@localhost:5431/scheduler?sslmode=dis
 AUTH_USER=dev \
 AUTH_PASSWORD=dev \
 DESTINATIONS_CONFIG=./config/development/destinations \
-SCHEDULES_CONFIG=./config/development/schedules \
 ADDRESS=127.0.0.1:8075 \
 go run ./cmd/scheduler
 ```
@@ -103,8 +102,6 @@ If everything goes well, you should see the following logs:
 {"level":"info","time":"2021-06-29T17:22:24.511-0400","msg":"[Scheduler] Adding scheduler..."}
 {"level":"error","time":"2021-06-29T17:22:24.517-0400","msg":"[Scheduler] Error during initial load of scheduler","error":"no rows updated"}
 {"level":"info","time":"2021-06-29T17:22:24.517-0400","msg":"[Scheduler] Loading schedule initial config"}
-{"level":"info","time":"2021-06-29T17:22:24.518-0400","msg":"[Scheduler] Adding schedule config","kind":"lastdata","network":"cosmos","chain":"cosmoshub-4","task_id":"cosmoshub-4-lastdata"}
-{"level":"info","time":"2021-06-29T17:22:24.524-0400","msg":"[Scheduler] Adding schedule config","kind":"lastdata","network":"kava","chain":"kava-7","task_id":"kava-7-lastdata"}
 {"level":"info","time":"2021-06-29T17:22:24.527-0400","msg":"[Scheduler] Loading destinations initial config from path"}
 {"level":"info","time":"2021-06-29T17:22:24.528-0400","msg":"[Scheduler] Running Load"}
 {"level":"info","time":"2021-06-29T17:22:24.528-0400","msg":"[API] Connecting to websocket ","host":"ws://127.0.0.1:8085/ws"}
@@ -119,13 +116,20 @@ Whenever you spin up a new worker that has registered with a manager (e.g [kava-
 {"level":"info","time":"2021-06-29T17:18:14.985-0400","msg":"[Scheduler] Adding destination config","connection_type":"ws","network":"kava","chain_id":"kava-7"}
 ```
 
-### Open the UI
+### Add a task
 
-```sh
-open http://127.0.0.1:8075/ui/
-```
+To have the scheduler start coordinating data retrieval with the manager, you need to add a task. This can be done via the UI. 
 
-Scheduled tasks loaded via config are disabled by default. You will need to enable the tasks through the UI to start them.
+1. Open the UI at [http://127.0.0.1:8075/ui/](http://127.0.0.1:8075/ui/)
+2. Click New Task
+3. Enter the task details. For example, if you are running a [kava-worker](https://github.com/figment-networks/kava-worker) for the kava-7 chain, use the following values:
+  TaskId: "kava-7-lastdata"
+  Type: lastdata
+  Network: kava
+  ChainID: kava-7
+  Interval: 10s
+4. Add the task and navigate back to the task list (you may need to refresh the page)
+5. Scheduled tasks are disabled by default. In the task list, click "Enable Task" to start the task.
 
 ### Debug with VSCode
 
