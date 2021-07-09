@@ -23,6 +23,10 @@ func NewLastDataStorageTransport(driver PDriver) *SyncRangeStorageTransport {
 	}
 }
 
+func (s *SyncRangeStorageTransport) GetAllLatest(ctx context.Context, rcp coreStructs.RunConfigParams) (structures.SyncRecord, error) {
+	return s.Driver.GetLatest(ctx, rcp)
+}
+
 func (s *SyncRangeStorageTransport) GetLatest(ctx context.Context, rcp coreStructs.RunConfigParams) (structures.SyncRecord, error) {
 	return s.Driver.GetLatest(ctx, rcp)
 }

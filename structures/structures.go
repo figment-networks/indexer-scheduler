@@ -87,3 +87,9 @@ type NVCKey struct {
 func (nv NVCKey) String() string {
 	return fmt.Sprintf("%s:%s (%s) %s", nv.Network, nv.ChainID, nv.Version)
 }
+
+type LastHeight struct {
+	ChainID string `json:"chain_id"`
+	Height  uint64 `json:"height"`
+	Network string `json:"network"`
+}

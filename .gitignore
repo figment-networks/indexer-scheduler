@@ -5,3 +5,4 @@ node_modules
 assets/build/
 ui/assets/
 assets/node_modules/
+/assets/.eslintrc.js

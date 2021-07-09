@@ -15,6 +15,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/persistence/params"
 	"github.com/figment-networks/indexer-scheduler/process"
 	"github.com/figment-networks/indexer-scheduler/structures"
+	"github.com/figment-networks/indexer-scheduler/utils"
 	"go.uber.org/zap"
 
 	"github.com/google/uuid"
@@ -219,6 +220,8 @@ func (c *Core) RegisterHandles(smux *http.ServeMux) {
 	smux.HandleFunc("/scheduler/core/enable/", c.handlerEnableSchedule)
 	smux.HandleFunc("/scheduler/core/disable/", c.handlerDisableSchedule)
 	smux.HandleFunc("/scheduler/core/addTask/", c.handlerAddSchedule)
+	smux.HandleFunc("/scheduler/core/deleteTask/", c.handlerDeleteSchedule)
+	smux.HandleFunc("/scheduler/core/getLastHeights", c.handlerGetLastHeights)
 }
 
 func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
@@ -226,9 +229,14 @@ func (c *Core) handlerListSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
-	w.Header().Add("Access-Control-Allow-Origin", "*")
+	utils.SetupResponse(&w, r)
 
 	schedule, err := c.ListSchedule(r.Context())
 	if err != nil {
@@ -247,7 +255,7 @@ func (c *Core) handlerEnableSchedule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Add("Content-type", "application/json")
-	w.Header().Add("Access-Control-Allow-Origin", "*")
+	utils.SetupResponse(&w, r)
 
 	enc := json.NewEncoder(w)
 	sIDs := strings.Replace(r.URL.Path, "/scheduler/core/enable/", "", -1)
@@ -274,7 +282,7 @@ func (c *Core) handlerDisableSchedule(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
-	w.Header().Add("Access-Control-Allow-Origin", "*")
+	utils.SetupResponse(&w, r)
 
 	sIDs := strings.Replace(r.URL.Path, "/scheduler/core/disable/", "", -1)
 	sID, err := uuid.Parse(sIDs)
@@ -307,9 +315,15 @@ func (c *Core) handlerAddSchedule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	enc := json.NewEncoder(w)
+
 	w.Header().Add("Content-type", "application/json")
-	w.Header().Add("Access-Control-Allow-Origin", "*")
+	utils.SetupResponse(&w, r)
 
 	rcar := RunConfigAddRequest{}
 
@@ -352,6 +366,69 @@ func (c *Core) handlerAddSchedule(w http.ResponseWriter, r *http.Request) {
 		enc.Encode(string(`{"error":"` + err.Error() + `"}`))
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	enc.Encode(string(`{"status":"ok"}`))
+}
+
+type RunConfigDeleteRequest struct {
+	TaskID string `json:"task_id"`
+}
+
+func (c *Core) handlerDeleteSchedule(w http.ResponseWriter, r *http.Request) {
+	if err := auth.BasicAuth(c.creds, w, r); err != nil {
+		return
+	}
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	enc := json.NewEncoder(w)
+
+	w.Header().Add("Content-type", "application/json")
+	utils.SetupResponse(&w, r)
+
+	taskID := strings.TrimPrefix(r.URL.Path, "/scheduler/core/deleteTask/")
+	if taskID == "" {
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode(string(`{"error":"task_id is required"}`))
+		return
+	}
+
+	if err := c.coreStore.DeleteConfig(r.Context(), taskID); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode(string(`{"error":"` + err.Error() + `"}`))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	enc.Encode(string(`{"status":"ok"}`))
+}
+
+func (c *Core) handlerGetLastHeights(w http.ResponseWriter, r *http.Request) {
+	if err := auth.BasicAuth(c.creds, w, r); err != nil {
+		return
+	}
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	enc := json.NewEncoder(w)
+
+	w.Header().Add("Content-type", "application/json")
+	utils.SetupResponse(&w, r)
+
+	latest, err := c.coreStore.GetLastHeights(r.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		enc.Encode(string(`{"error":"` + err.Error() + `"}`))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	enc.Encode(latest)
 }

@@ -1,10 +1,9 @@
 import {
-    UI_HIDE_NEW_TASK, UI_SHOW_NEW_TASK
+  UI_HIDE_NEW_TASK, UI_SHOW_NEW_TASK
 } from '../actions'
-  
-  
+
 const newtask = (state = {
-    show: false,
+  show: false
 }, action) => {
   switch (action.type) {
     case UI_HIDE_NEW_TASK:
@@ -21,4 +20,3 @@ const newtask = (state = {
 }
 
 export default newtask
-  
