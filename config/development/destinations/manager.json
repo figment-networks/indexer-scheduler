@@ -1,0 +1,14 @@
+[{
+    "type": "manager",
+    "version": "0.0.1",
+    "conn_type": "ws",
+    "address": "127.0.0.1:8085",
+    "additional": {
+        "lastdata": {
+            "endpoint": "/scrape_latest"
+        },
+        "syncrange": {
+            "endpoint": "/scrape_latest"
+        }
+    }
+}]

@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "Debug",
+            "type": "go",
+            "request": "launch",
+            "program": "${workspaceRoot}/cmd/indexer-scheduler",
+            "env": {
+                "DATABASE_URL": "postgres://scheduler:scheduler@localhost:5431/scheduler?sslmode=disable",
+                "AUTH_USER":"dev",
+                "AUTH_PASSWORD":"dev",
+                "DESTINATIONS_CONFIG":"${workspaceRoot}/config/development/destinations",
+                "ADDRESS":"127.0.0.1:8075"
+            }
+        }
+    ]
+}

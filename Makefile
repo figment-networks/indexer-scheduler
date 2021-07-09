@@ -3,9 +3,10 @@ LDFLAGS      := -w -s
 MODULE       := github.com/figment-networks/indexer-scheduler
 VERSION_FILE ?= ./VERSION
 
-
 # Git Status
 GIT_SHA ?= $(shell git rev-parse --short HEAD)
+
+NPM_VERSION  := $(shell npm -v 2> /dev/null)
 
 ifneq (,$(wildcard $(VERSION_FILE)))
 VERSION ?= $(shell head -n 1 $(VERSION_FILE))
@@ -43,6 +44,9 @@ generate:
 
 .PHONY: prepare-ui-install-modules
 prepare-ui-install-modules:
+ifndef NPM_VERSION
+$(error "Could not find npm. Install nodejs and npm to build the UI. See https://github.com/asdf-vm/asdf-nodejs")
+endif
 	set NODE_ENV=development
 	cd ./assets; npm install
 
