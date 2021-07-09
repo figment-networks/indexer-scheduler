@@ -3,6 +3,8 @@ package auth
 import (
 	"errors"
 	"net/http"
+
+	"github.com/figment-networks/indexer-scheduler/utils"
 )
 
 type AuthCredentials struct {
@@ -20,6 +22,7 @@ func BasicAuth(ac AuthCredentials, w http.ResponseWriter, r *http.Request) error
 	user, pass, _ := r.BasicAuth()
 
 	if ac.User != user || ac.Password != pass {
+		utils.SetupResponse(&w, r)
 		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 		http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 		return ErrUnauthenticated

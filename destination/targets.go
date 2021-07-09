@@ -7,6 +7,7 @@ import (
 
 	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/structures"
+	"github.com/figment-networks/indexer-scheduler/utils"
 	"go.uber.org/zap"
 )
 
@@ -142,6 +143,7 @@ func (s *Scheme) handlerListDestination(w http.ResponseWriter, r *http.Request) 
 
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-Type", "application/json")
+	utils.SetupResponse(&w, r)
 	w.WriteHeader(http.StatusOK)
 	so := schemeOutp{Destinations: make(map[string][]structures.Target)}
 

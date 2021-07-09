@@ -7,6 +7,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange/persistence"
 	"github.com/figment-networks/indexer-scheduler/runner/syncrange/structures"
+	"github.com/figment-networks/indexer-scheduler/utils"
 )
 
 type Monitor struct {
@@ -37,7 +38,13 @@ func (m *Monitor) handlerListRunning(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	enc := json.NewEncoder(w)
+	utils.SetupResponse(&w, r)
 	w.Header().Add("Content-type", "application/json")
 
 	dec := json.NewDecoder(r.Body)

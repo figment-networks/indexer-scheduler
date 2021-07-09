@@ -7,6 +7,7 @@ import (
 	"github.com/figment-networks/indexer-scheduler/http/auth"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/persistence"
 	"github.com/figment-networks/indexer-scheduler/runner/lastdata/structures"
+	"github.com/figment-networks/indexer-scheduler/utils"
 )
 
 type Monitor struct {
@@ -36,8 +37,14 @@ func (m *Monitor) handlerListRunning(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	enc := json.NewEncoder(w)
 	w.Header().Add("Content-type", "application/json")
+	utils.SetupResponse(&w, r)
 
 	dec := json.NewDecoder(r.Body)
 	lrrp := ListRunningRequestPayload{}

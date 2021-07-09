@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/figment-networks/indexer-scheduler/persistence/params"
@@ -171,4 +172,114 @@ func (d *Driver) AddConfig(ctx context.Context, rc structures.RunConfig) (err er
 		} */
 
 	return params.ErrAlreadyRegistred
+}
+
+func (d *Driver) DeleteConfig(ctx context.Context, taskID string) (err error) {
+	_, err = d.db.QueryContext(ctx, "DELETE FROM schedule WHERE task_id = $1", taskID)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *Driver) GetLastHeights(ctx context.Context) (lRec []structures.LastHeight, err error) {
+	lastHeightsMap := make(map[string]uint64)
+
+	if err := d.getAllLatest(ctx, lastHeightsMap); err != nil {
+		return nil, err
+	}
+
+	if err := d.getAllSyncRange(ctx, lastHeightsMap); err != nil {
+		return nil, err
+	}
+
+	return lastHeightsMapper(lastHeightsMap), nil
+}
+
+func (d *Driver) getAllLatest(ctx context.Context, lastHeightsMap map[string]uint64) error {
+	rows, err := d.db.QueryContext(ctx, "SELECT DISTINCT chain_id, network FROM schedule_latest")
+	if err != nil {
+		return err
+	}
+
+	if rows.Next() {
+		var chainID, network string
+		if err := rows.Scan(&chainID, &network); err != nil {
+			if err == sql.ErrNoRows {
+				return params.ErrNotFound
+			}
+			return err
+		}
+
+		var height uint64
+		row := d.db.QueryRow("SELECT MAX(height) FROM schedule_latest WHERE chain_id = $1 AND network = $2 AND error = $3", chainID, network, "")
+		if row != nil {
+			if err := row.Scan(&height); err != nil {
+				if err == sql.ErrNoRows {
+					return params.ErrNotFound
+				}
+				return err
+			}
+
+			key := fmt.Sprintf("%s,%s", chainID, network)
+			lastHeightsMap[key] = height
+		}
+	}
+
+	return nil
+}
+
+func (d *Driver) getAllSyncRange(ctx context.Context, lastHeightsMap map[string]uint64) error {
+	rows, err := d.db.QueryContext(ctx, "SELECT DISTINCT chain_id, network FROM schedule_syncrange")
+	if err != nil {
+		return err
+	}
+
+	if rows.Next() {
+		var chainID, network string
+		if err := rows.Scan(&chainID, &network); err != nil {
+			if err == sql.ErrNoRows {
+				return params.ErrNotFound
+			}
+			return err
+		}
+
+		var height uint64
+		if row := d.db.QueryRow("SELECT MAX(height) FROM schedule_syncrange WHERE chain_id = $1 AND network = $2 AND error = $3", chainID, network, ""); row != nil {
+			if err := row.Scan(&height); err != nil {
+				if err == sql.ErrNoRows {
+					return params.ErrNotFound
+				}
+				return err
+			}
+		}
+
+		key := fmt.Sprintf("%s,%s", chainID, network)
+		if lastHeight, ok := lastHeightsMap[key]; ok {
+			if lastHeight < height {
+				lastHeightsMap[key] = height
+			}
+		} else {
+			lastHeightsMap[key] = height
+		}
+	}
+
+	return nil
+}
+
+func lastHeightsMapper(lastHeightsMap map[string]uint64) []structures.LastHeight {
+	var i int
+	lastHeights := make([]structures.LastHeight, len(lastHeightsMap))
+	for key, height := range lastHeightsMap {
+		k := strings.Split(key, ",")
+		lastHeights[i] = structures.LastHeight{
+			ChainID: k[0],
+			Network: k[1],
+			Height:  height,
+		}
+	}
+
+	return lastHeights
 }

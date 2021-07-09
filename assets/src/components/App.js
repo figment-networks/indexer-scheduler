@@ -1,39 +1,18 @@
 import React from 'react'
-import Tasks from '../containers/Tasks'
-import LastData from '../containers/LastData'
-import NewTask from '../containers/NewTask'
+import Tasks from './task/Tasks'
+import Header from './header/Header'
 
-import Container from 'react-bootstrap/Container'
-import Jumbotron from 'react-bootstrap/Jumbotron'
-import Row from 'react-bootstrap/Row'
-import Tabs from 'react-bootstrap/Tabs'
-import Tab from 'react-bootstrap/Tab'
+import '../style/style.css'
 
-const App = () => (
-  <Container>
-    <Jumbotron>
-        <h1>Scheduler UI</h1>
-    </Jumbotron>
-    <Tabs defaultActiveKey="home" id="uncontrolled-tab-example">
-      <Tab eventKey="home" title="List">
-        <Row>
-          <Tasks />
-        </Row>
-        <Row>
-          <LastData />
-        </Row>
-      </Tab>
-      <Tab eventKey="newTask" title="New Task">
-        <Row>
-          <NewTask />
-        </Row>
-      </Tab>
-
-    </Tabs>
-
-
-
-  </Container>
-)
+class App extends React.Component {
+  render () {
+    return (
+      <div className="background-light container">
+        <Header/>
+        <Tasks />
+      </div>
+    )
+  }
+}
 
 export default App
